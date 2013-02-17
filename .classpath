@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="resources"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="lib" path="/home/warren/projects/typegame/lib/lwjgl-2.8.5/jar/lzma.jar"/>
+	<classpathentry kind="lib" path="/home/warren/projects/typegame/lib/lwjgl-2.8.5/jar/lwjgl_util.jar"/>
+	<classpathentry kind="lib" path="/home/warren/projects/typegame/lib/lwjgl-2.8.5/jar/lwjgl.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/home/warren/projects/typegame/lib/lwjgl-2.8.5/native"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/home/warren/projects/typegame/lib/lwjgl-2.8.5/jar/jinput.jar"/>
+	<classpathentry kind="lib" path="/home/warren/projects/typegame/lib/slick-util.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/lwjgl-fonts"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
