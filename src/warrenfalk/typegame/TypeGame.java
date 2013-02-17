@@ -2,25 +2,19 @@ package warrenfalk.typegame;
 
 import java.awt.Font;
 import java.awt.FontFormatException;
-import java.awt.event.MouseEvent;
 import java.awt.font.FontRenderContext;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
 
-import org.lwjgl.font.demos.Trackball;
 import org.lwjgl.font.glfont.FTFont;
 import org.lwjgl.font.glfont.FTGLPolygonFont;
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.PixelFormat;
 
 public class TypeGame {
-
-	public static Trackball trackball = new Trackball();
 
 	public static void main(String[] args) throws Exception {
 		int width = 1066;
@@ -43,23 +37,44 @@ public class TypeGame {
 		float top = -height / 2;
 		float right = width + left;
 		float bottom = height + top;
-		GL11.glFrustum(left, right, bottom, top, 40f, 1000f);
-		// GL11.glOrtho(left, right, top, bottom, 1, -1);
+		GL11.glOrtho(left, right, top, bottom, 0, 1000);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
+		GL11.glLoadIdentity();
 
 		Font f = loadFont("/fonts/Comfortaa-Regular.ttf", 60);
 		FontRenderContext fcontext = FTFont.STANDARDCONTEXT;
 		// FTFont font = new FTGLExtrdFont(f, fcontext);
 		FTFont font = new FTGLPolygonFont(f, fcontext);
 
-		FloatBuffer fb = ByteBuffer.allocateDirect(16 * 4)
-				.order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
-		trackball.tbInit(MouseEvent.BUTTON1);
-		trackball.tbReshape(width, height);
+		float cursorPosition = 0f;
+		float idealOffset = -300f;
+		float textLinePosition = idealOffset;
+		String challengeText = "a bird in the hand is worth two in the bush.";
+		int nextChar = 0;
 
 		while (true) {
+			// process input
+			while (Keyboard.next()) {
+				if (Keyboard.getEventKeyState()) {
+					nextChar++;
+					float w = font.getBBox(challengeText.substring(0, nextChar)).getWidth();
+					cursorPosition = w;
+				}
+			}
+			
+			// world tick..
+			float idealTextLinePosition = idealOffset - cursorPosition;
+			float textLineDiff = idealTextLinePosition - textLinePosition;
+			float textLineMove = textLineDiff * 0.07f;
+			textLinePosition = textLinePosition + textLineMove;
+			
+			GL11.glMatrixMode(GL11.GL_MODELVIEW);
+			GL11.glPushMatrix(); // save base view matrix
+			GL11.glTranslatef(textLinePosition, 0, 0);
+			
+			// begin drawing
 			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-
+			
 			// gradient background
 			GL11.glMatrixMode(GL11.GL_PROJECTION);
 			GL11.glPushMatrix();
@@ -81,19 +96,37 @@ public class TypeGame {
 			GL11.glPopMatrix();
 
 			// begin scene
-			GL11.glPushMatrix();
-			trackball.tbMatrix(fb);
-			GL11.glMultMatrix(fb);
-
+			GL11.glMatrixMode(GL11.GL_MODELVIEW);
+			
+			// cursor (arrow)
+			GL11.glPushMatrix(); // save view matrix
+			GL11.glTranslatef(cursorPosition, 0f, 0f);
+			GL11.glColor4f(1f, 0f, 0f, 0.8f);
+			GL11.glBegin(GL11.GL_QUADS);
+			GL11.glVertex3f(0f, 0f, 0f);
+			GL11.glVertex3f(0f, 10f, 0f);
+			GL11.glVertex3f(2f, 10f, 0f);
+			GL11.glVertex3f(2f, 0f, 0f);
+			GL11.glEnd();
+			GL11.glBegin(GL11.GL_TRIANGLES);
+			GL11.glVertex3f(1f, 10f, 0f);
+			GL11.glVertex3f(1f, 13f, 0f);
+			GL11.glVertex3f(4f, 9f, 0f);
+			GL11.glEnd();
+			GL11.glPopMatrix(); // restore view matrix
+			
+			GL11.glPushMatrix(); // save view matrix
 			// text
 			GL11.glColor4f(0f, 0f, 0f, 1f);
-			GL11.glScalef(14f, -14f, 1f);
 			// GL11.glRotatef(0f, 1f, 0f, 0f);
-			GL11.glTranslatef(-400f, 0, -900f);
-			font.render("a bird in the hand is worth two in the bush");
+			//GL11.glTranslatef(textLinePosition, 0, -900f);
+			//GL11.glScalef(14f, -14f, 1f);
+			font.render(challengeText);
 
 			// end scene
-			GL11.glPopMatrix();
+			GL11.glPopMatrix(); // restore view matrix
+			
+			GL11.glPopMatrix(); // restore base view matrix
 
 			Display.update();
 			Display.sync(60);
