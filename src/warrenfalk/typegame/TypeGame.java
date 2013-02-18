@@ -100,18 +100,22 @@ public class TypeGame {
 			
 			// cursor (arrow)
 			GL11.glPushMatrix(); // save view matrix
-			GL11.glTranslatef(cursorPosition, 0f, 0f);
+			GL11.glTranslatef(cursorPosition, 60f, 0f);
+			GL11.glScalef(5f, -5f, 1f);
 			GL11.glColor4f(1f, 0f, 0f, 0.8f);
 			GL11.glBegin(GL11.GL_QUADS);
-			GL11.glVertex3f(0f, 0f, 0f);
-			GL11.glVertex3f(0f, 10f, 0f);
-			GL11.glVertex3f(2f, 10f, 0f);
-			GL11.glVertex3f(2f, 0f, 0f);
+			GL11.glVertex3f(-1f, -13f, 0f);
+			GL11.glVertex3f(-1f, -3f, 0f);
+			GL11.glVertex3f(1f, -3f, 0f);
+			GL11.glVertex3f(1f, -13f, 0f);
 			GL11.glEnd();
 			GL11.glBegin(GL11.GL_TRIANGLES);
-			GL11.glVertex3f(1f, 10f, 0f);
-			GL11.glVertex3f(1f, 13f, 0f);
-			GL11.glVertex3f(4f, 9f, 0f);
+			GL11.glVertex3f(0f, -3f, 0f);
+			GL11.glVertex3f(0f, 0f, 0f);
+			GL11.glVertex3f(3f, -4f, 0f);
+			GL11.glVertex3f(0f, -3f, 0f);
+			GL11.glVertex3f(-3f, -4f, 0f);
+			GL11.glVertex3f(0f, 0f, 0f);
 			GL11.glEnd();
 			GL11.glPopMatrix(); // restore view matrix
 			
@@ -141,6 +145,8 @@ public class TypeGame {
 	private static float calculateCursorPosition(FTFont font, String challengeText, int nextChar) {
 		String completedText = challengeText.substring(0, nextChar);
 		float completedWidth = font.advance(completedText);
+		if (nextChar + 1 > challengeText.length())
+			return completedWidth;
 		String futureCompletedText = challengeText.substring(0, nextChar + 1);
 		float futureCompletedWidth = font.advance(futureCompletedText);
 		return completedWidth + (futureCompletedWidth - completedWidth) / 2f;
