@@ -52,13 +52,13 @@ public class TypeGame {
 		String challengeText = "a bird in the hand is worth two in the bush.";
 		int nextChar = 0;
 
+		cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 		while (true) {
 			// process input
 			while (Keyboard.next()) {
 				if (Keyboard.getEventKeyState()) {
 					nextChar++;
-					float w = font.getBBox(challengeText.substring(0, nextChar)).getWidth();
-					cursorPosition = w;
+					cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 				}
 			}
 			
@@ -136,6 +136,14 @@ public class TypeGame {
 				System.exit(0);
 			}
 		}
+	}
+
+	private static float calculateCursorPosition(FTFont font, String challengeText, int nextChar) {
+		String completedText = challengeText.substring(0, nextChar);
+		float completedWidth = font.advance(completedText);
+		String futureCompletedText = challengeText.substring(0, nextChar + 1);
+		float futureCompletedWidth = font.advance(futureCompletedText);
+		return completedWidth + (futureCompletedWidth - completedWidth) / 2f;
 	}
 
 	private static Font loadFont(String fontName, float fontSize)
