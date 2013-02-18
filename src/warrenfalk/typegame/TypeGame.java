@@ -47,9 +47,9 @@ public class TypeGame {
 		FTFont font = new FTGLPolygonFont(f, fcontext);
 
 		float cursorPosition = 0f;
-		float idealOffset = -300f;
+		float idealOffset = -(width * 0.3f);
 		float textLinePosition = idealOffset;
-		String challengeText = "a bird in the hand is worth two in the bush.";
+		String challengeText = "Better to remain silent and be thought a fool than to speak and remove all doubt.";
 		int nextChar = 0;
 
 		cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
@@ -119,17 +119,25 @@ public class TypeGame {
 			GL11.glEnd();
 			GL11.glPopMatrix(); // restore view matrix
 			
+			// cursor -> current character 
 			GL11.glPushMatrix(); // save view matrix
-			// text
-			GL11.glColor4f(0f, 0f, 0f, 1f);
-			// GL11.glRotatef(0f, 1f, 0f, 0f);
-			//GL11.glTranslatef(textLinePosition, 0, -900f);
-			//GL11.glScalef(14f, -14f, 1f);
-			font.render(challengeText);
+			String nextCharString = challengeText.substring(nextChar, nextChar + 1);
+			float nextCharWidth = font.advance(nextCharString);
+			float nextCharScale = 2f;
+			GL11.glTranslatef(cursorPosition - (nextCharWidth * nextCharScale / 2f), -60f * nextCharScale, 0f);
+			GL11.glScalef(nextCharScale, nextCharScale, 1f);
+			GL11.glColor4f(1f, 0f, 0f, 0.8f);
+			font.render(nextCharString);
+			GL11.glPopMatrix(); // restore view matrix
 
-			// end scene
+			
+			// text
+			GL11.glPushMatrix(); // save view matrix
+			GL11.glColor4f(0f, 0f, 0f, 1f);
+			font.render(challengeText);
 			GL11.glPopMatrix(); // restore view matrix
 			
+			// end scene
 			GL11.glPopMatrix(); // restore base view matrix
 
 			Display.update();
