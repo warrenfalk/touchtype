@@ -122,9 +122,13 @@ public class TypeGame {
 			// cursor -> current character 
 			GL11.glPushMatrix(); // save view matrix
 			String nextCharString = challengeText.substring(nextChar, nextChar + 1);
-			float nextCharWidth = font.advance(nextCharString);
 			float nextCharScale = 2f;
-			GL11.glTranslatef(cursorPosition - (nextCharWidth * nextCharScale / 2f), -60f * nextCharScale, 0f);
+			if (" ".equals(nextCharString)) {
+				nextCharString = "[space]";
+				nextCharScale = 0.5f;
+			}
+			float nextCharWidth = font.advance(nextCharString);
+			GL11.glTranslatef(cursorPosition - (nextCharWidth * nextCharScale / 2f), -40f - 40f * nextCharScale, 0f);
 			GL11.glScalef(nextCharScale, nextCharScale, 1f);
 			GL11.glColor4f(1f, 0f, 0f, 0.8f);
 			font.render(nextCharString);
