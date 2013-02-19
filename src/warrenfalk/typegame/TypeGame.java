@@ -57,12 +57,16 @@ public class TypeGame {
 			// process input
 			while (Keyboard.next()) {
 				if (Keyboard.getEventKeyState()) {
-					nextChar++;
-					cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+					char kchar = Character.toLowerCase(Keyboard.getEventCharacter());
+					char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
+					if (kchar == cchar) {
+						nextChar++;
+						cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+					}
 				}
 			}
 			
-			// world tick..
+			// world tick
 			float idealTextLinePosition = idealOffset - cursorPosition;
 			float textLineDiff = idealTextLinePosition - textLinePosition;
 			float textLineMove = textLineDiff * 0.07f;
