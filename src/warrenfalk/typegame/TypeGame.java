@@ -61,6 +61,10 @@ public class TypeGame {
 					char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
 					if (kchar == cchar) {
 						nextChar++;
+						if (nextChar == challengeText.length()) {
+							nextChar = 0;
+							// TODO: advance to next challenge text
+						}
 						cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 					}
 				}
