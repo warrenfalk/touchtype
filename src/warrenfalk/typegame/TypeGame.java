@@ -55,9 +55,11 @@ public class TypeGame {
 		GL11.glLoadIdentity();
 
 		Font f = loadFont("/fonts/Comfortaa-Regular.ttf", 60);
+		Font f2 = loadFont("/fonts/NEUROPOL.ttf", 20);
 		FontRenderContext fcontext = FTFont.STANDARDCONTEXT;
 		// FTFont font = new FTGLExtrdFont(f, fcontext);
 		FTFont font = new FTGLPolygonFont(f, fcontext);
+		FTFont statusFont = new FTGLPolygonFont(f2, fcontext);
 		
 		Audio clickEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/click.wav"));
 		Audio buzzerEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/buzzer.wav"));
@@ -75,23 +77,26 @@ public class TypeGame {
 			// process input
 			while (Keyboard.next()) {
 				if (Keyboard.getEventKeyState()) {
-					char kchar = Character.toLowerCase(Keyboard.getEventCharacter());
-					char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
-					if (kchar == cchar) {
-						clickEffect.playAsSoundEffect(1f, 0.3f, false);
-						nextChar++;
-						if (nextChar == challengeText.length()) {
-							nextChar = 0;
-							bellEffect.playAsSoundEffect(1f, 1f, false);
-							level++;
-							challengeText = getChallengeText(level);
+					char kchar = Keyboard.getEventCharacter();
+					if (kchar != 0) {
+						kchar = Character.toLowerCase(kchar);
+						char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
+						if (kchar == cchar) {
+							clickEffect.playAsSoundEffect(1f, 0.3f, false);
+							nextChar++;
+							if (nextChar == challengeText.length()) {
+								nextChar = 0;
+								bellEffect.playAsSoundEffect(1f, 1f, false);
+								level++;
+								challengeText = getChallengeText(level);
+							}
+							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 						}
-						cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
-					}
-					else {
-						buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
-						nextChar = 0;
-						cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+						else {
+							buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
+							nextChar = 0;
+							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+						}
 					}
 				}
 			}
@@ -120,7 +125,7 @@ public class TypeGame {
 			GL11.glColor4f(1f, 1f, 1f, 1f);
 			GL11.glVertex2f(-1f, -1f);
 			GL11.glVertex2f(1f, -1f);
-			GL11.glColor4f(0.7f, 0.7f, 0.7f, 1f);
+			GL11.glColor4f(0.4f, 0.4f, 0.4f, 1f);
 			GL11.glVertex2f(1f, 1f);
 			GL11.glVertex2f(-1f, 1f);
 			GL11.glEnd();
@@ -168,6 +173,13 @@ public class TypeGame {
 			font.render(nextCharString);
 			GL11.glPopMatrix(); // restore view matrix
 
+			// status text
+			GL11.glPushMatrix(); // save view matrix
+			GL11.glLoadIdentity(); // back to identity reference frame
+			GL11.glTranslatef(-400f, 250f, 0f);
+			GL11.glColor4f(0.4f, 1f, 0.4f, 1f);
+			statusFont.render("Level: " + (level + 1));
+			GL11.glPopMatrix(); // restore view matrix
 			
 			// text
 			GL11.glPushMatrix(); // save view matrix
