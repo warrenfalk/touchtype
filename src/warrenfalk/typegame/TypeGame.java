@@ -56,11 +56,12 @@ public class TypeGame {
 		
 		Audio clickEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/click.wav"));
 		Audio buzzerEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/buzzer.wav"));
+		Audio bellEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/bell.wav"));
 
 		float cursorPosition = 0f;
 		float idealOffset = -(width * 0.3f);
 		float textLinePosition = idealOffset;
-		String challengeText = "Better to remain silent and be thought a fool than to speak and remove all doubt.";
+		String challengeText = "Less is more.";
 		int nextChar = 0;
 
 		cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
@@ -75,6 +76,7 @@ public class TypeGame {
 						nextChar++;
 						if (nextChar == challengeText.length()) {
 							nextChar = 0;
+							bellEffect.playAsSoundEffect(1f, 1f, false);
 							// TODO: advance to next challenge text
 						}
 						cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
