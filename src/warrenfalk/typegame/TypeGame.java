@@ -20,13 +20,13 @@ public class TypeGame {
 		int width = 1066;
 		int height = 600;
 
-		PixelFormat pf = new PixelFormat(8, 16, 8, 16);
+		PixelFormat pf = new PixelFormat().withDepthBits(24).withSamples(4).withSRGB(true);
 		Display.setDisplayMode(new DisplayMode(width, height));
 		Display.create(pf);
 		Display.setVSyncEnabled(true);
 
 		GL11.glClearColor(1f, 1f, 1f, 0f);
-
+		
 		GL11.glEnable(GL11.GL_BLEND);
 		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
