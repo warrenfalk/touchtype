@@ -67,6 +67,7 @@ public class TypeGame {
 		Audio clickEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/click.wav"));
 		Audio buzzerEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/buzzer.wav"));
 		Audio bellEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/bell.wav"));
+		Audio successEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/success.wav"));
 
 		float cursorPosition = 0f;
 		float idealOffset = -(width * 0.3f);
@@ -96,12 +97,20 @@ public class TypeGame {
 							nextChar++;
 							if (nextChar == challengeText.length()) {
 								nextChar = 0;
-								bellEffect.playAsSoundEffect(1f, 1f, false);
-								tries = 0;
+								long elapsed = System.currentTimeMillis() - startTime;
+								boolean success = elapsed <= msToWin;
+								if (success) {
+									successEffect.playAsSoundEffect(1f, 1f, false);
+									tries = 0;
+									level++;
+									challengeText = getChallengeText(level);
+									msToWin = calcWinTime(challengeText);
+								}
+								else {
+									tries++;
+									bellEffect.playAsSoundEffect(1f, 1f, false);
+								}
 								startTime = 0L;
-								level++;
-								challengeText = getChallengeText(level);
-								msToWin = calcWinTime(challengeText);
 							}
 							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 						}
