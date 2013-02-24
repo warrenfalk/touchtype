@@ -5,14 +5,22 @@ import java.awt.FontFormatException;
 import java.awt.font.FontRenderContext;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.IntBuffer;
 
+import org.lwjgl.BufferUtils;
 import org.lwjgl.font.glfont.FTFont;
 import org.lwjgl.font.glfont.FTGLPolygonFont;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.openal.AL;
+import org.lwjgl.openal.AL10;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.PixelFormat;
+import org.lwjgl.util.WaveData;
+import org.newdawn.slick.openal.Audio;
+import org.newdawn.slick.openal.AudioLoader;
+import org.newdawn.slick.util.ResourceLoader;
 
 public class TypeGame {
 
@@ -45,6 +53,9 @@ public class TypeGame {
 		FontRenderContext fcontext = FTFont.STANDARDCONTEXT;
 		// FTFont font = new FTGLExtrdFont(f, fcontext);
 		FTFont font = new FTGLPolygonFont(f, fcontext);
+		
+		Audio clickEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/click.wav"));
+		
 
 		float cursorPosition = 0f;
 		float idealOffset = -(width * 0.3f);
@@ -60,6 +71,7 @@ public class TypeGame {
 					char kchar = Character.toLowerCase(Keyboard.getEventCharacter());
 					char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
 					if (kchar == cchar) {
+						clickEffect.playAsSoundEffect(1f, 0.3f, false);
 						nextChar++;
 						if (nextChar == challengeText.length()) {
 							nextChar = 0;
@@ -157,6 +169,7 @@ public class TypeGame {
 
 			if (Display.isCloseRequested()) {
 				Display.destroy();
+				AL.destroy();
 				System.exit(0);
 			}
 		}
