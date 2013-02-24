@@ -78,6 +78,7 @@ public class TypeGame {
 		long startTime = 0L;
 
 		String challengeText = getChallengeText(level);
+		long msToWin = calcWinTime(challengeText);
 		cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 		while (true) {
 			// process input
@@ -100,6 +101,7 @@ public class TypeGame {
 								startTime = 0L;
 								level++;
 								challengeText = getChallengeText(level);
+								msToWin = calcWinTime(challengeText);
 							}
 							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 						}
@@ -107,7 +109,7 @@ public class TypeGame {
 							buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
 							startTime = 0L;
 							if (nextChar > 0)
-							tries++;
+								tries++;
 							nextChar = 0;
 							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 						}
@@ -190,7 +192,7 @@ public class TypeGame {
 			// status text
 			GL11.glPushMatrix(); // save view matrix
 			status(statusFont, 0, 0, "Level :", "" + (level + 1));
-			status(statusFont, 1, 0, "To win :", "3.2 secs");
+			status(statusFont, 1, 0, "To win :", secondsFormat.format((double)msToWin / 1000.0) + " secs");
 			String time;
 			if (startTime == 0) {
 				time = "0.0 secs";
@@ -221,6 +223,10 @@ public class TypeGame {
 				System.exit(0);
 			}
 		}
+	}
+	
+	private static long calcWinTime(String challengeText) {
+		return (long)(5000f * (float)challengeText.length() / 13f);
 	}
 	
 	private static void status(FTFont statusFont, int row, int col, String label, String value) {
