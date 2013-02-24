@@ -3,9 +3,12 @@ package warrenfalk.typegame;
 import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.font.FontRenderContext;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.font.glfont.FTFont;
@@ -23,6 +26,8 @@ import org.newdawn.slick.openal.AudioLoader;
 import org.newdawn.slick.util.ResourceLoader;
 
 public class TypeGame {
+	
+	static String[] challenges;
 
 	public static void main(String[] args) throws Exception {
 		int width = 1066;
@@ -61,9 +66,10 @@ public class TypeGame {
 		float cursorPosition = 0f;
 		float idealOffset = -(width * 0.3f);
 		float textLinePosition = idealOffset;
-		String challengeText = "Less is more.";
+		int level = 0;
 		int nextChar = 0;
 
+		String challengeText = getChallengeText(level);
 		cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 		while (true) {
 			// process input
@@ -77,7 +83,8 @@ public class TypeGame {
 						if (nextChar == challengeText.length()) {
 							nextChar = 0;
 							bellEffect.playAsSoundEffect(1f, 1f, false);
-							// TODO: advance to next challenge text
+							level++;
+							challengeText = getChallengeText(level);
 						}
 						cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 					}
@@ -180,6 +187,26 @@ public class TypeGame {
 				System.exit(0);
 			}
 		}
+	}
+	
+	private static String getChallengeText(int level) throws IOException {
+		if (challenges == null)
+			challenges = loadChallenges();
+		return challenges[level];
+	}
+	
+	private static String[] loadChallenges() throws IOException {
+		InputStream in = ResourceLoader.getResourceAsStream("levels/sayings.txt");
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		ArrayList<String> lines = new ArrayList<String>();
+		String line = null;
+		while (null != (line = reader.readLine())) {
+			line = line.trim();
+			if (line.length() == 0)
+				continue;
+			lines.add(line);
+		}
+		return lines.toArray(new String[lines.size()]);
 	}
 
 	private static float calculateCursorPosition(FTFont font, String challengeText, int nextChar) {
