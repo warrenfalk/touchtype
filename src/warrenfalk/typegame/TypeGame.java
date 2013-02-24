@@ -55,7 +55,7 @@ public class TypeGame {
 		FTFont font = new FTGLPolygonFont(f, fcontext);
 		
 		Audio clickEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/click.wav"));
-		
+		Audio buzzerEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/buzzer.wav"));
 
 		float cursorPosition = 0f;
 		float idealOffset = -(width * 0.3f);
@@ -77,6 +77,11 @@ public class TypeGame {
 							nextChar = 0;
 							// TODO: advance to next challenge text
 						}
+						cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+					}
+					else {
+						buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
+						nextChar = 0;
 						cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 					}
 				}
