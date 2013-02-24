@@ -74,6 +74,7 @@ public class TypeGame {
 		int level = 0;
 		int nextChar = 0;
 		
+		int tries = 0;
 		long startTime = 0L;
 
 		String challengeText = getChallengeText(level);
@@ -95,6 +96,7 @@ public class TypeGame {
 							if (nextChar == challengeText.length()) {
 								nextChar = 0;
 								bellEffect.playAsSoundEffect(1f, 1f, false);
+								tries = 0;
 								startTime = 0L;
 								level++;
 								challengeText = getChallengeText(level);
@@ -104,6 +106,8 @@ public class TypeGame {
 						else {
 							buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
 							startTime = 0L;
+							if (nextChar > 0)
+							tries++;
 							nextChar = 0;
 							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 						}
@@ -196,7 +200,7 @@ public class TypeGame {
 				time = secondsFormat.format((double)elapsed / 1000.0) + " secs";
 			}
 			status(statusFont, 2, 0, "Your time :", time);
-			status(statusFont, 3, 0, "Attempt :", "1");
+			status(statusFont, 3, 0, "Attempt :", "" + (tries + 1));
 			GL11.glPopMatrix(); // restore view matrix
 			
 			// text
