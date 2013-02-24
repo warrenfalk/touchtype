@@ -175,10 +175,10 @@ public class TypeGame {
 
 			// status text
 			GL11.glPushMatrix(); // save view matrix
-			GL11.glLoadIdentity(); // back to identity reference frame
-			GL11.glTranslatef(-400f, 250f, 0f);
-			GL11.glColor4f(0.4f, 1f, 0.4f, 1f);
-			statusFont.render("Level: " + (level + 1));
+			status(statusFont, 0, 0, "Level :", "" + (level + 1));
+			status(statusFont, 1, 0, "To win :", "3.2 secs");
+			status(statusFont, 2, 0, "Your time :", "0.0 secs");
+			status(statusFont, 3, 0, "Attempt :", "1");
 			GL11.glPopMatrix(); // restore view matrix
 			
 			// text
@@ -199,6 +199,17 @@ public class TypeGame {
 				System.exit(0);
 			}
 		}
+	}
+	
+	private static void status(FTFont statusFont, int row, int col, String label, String value) {
+		GL11.glLoadIdentity(); // back to identity reference frame
+		float labelWidth = statusFont.advance(label);
+		GL11.glTranslatef(-320f + 200f * col - labelWidth, 250f - 24f * row, 0f);
+		GL11.glColor4f(0f, 0f, 0f, 1f);
+		statusFont.render(label);
+		GL11.glTranslated(labelWidth + 13f, 0f, 0f);
+		GL11.glColor4f(0.4f, 1f, 0.4f, 1f);
+		statusFont.render(value);
 	}
 	
 	private static String getChallengeText(int level) throws IOException {
