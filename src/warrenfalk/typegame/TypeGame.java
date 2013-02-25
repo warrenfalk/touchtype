@@ -65,6 +65,7 @@ public class TypeGame {
 		DecimalFormat secondsFormat = new DecimalFormat("###,##0.0");
 		
 		Audio clickEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/click.wav"));
+		Audio click2Effect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/click2.wav"));
 		Audio buzzerEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/buzzer.wav"));
 		Audio bellEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/bell.wav"));
 		Audio successEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/success.wav"));
@@ -93,7 +94,10 @@ public class TypeGame {
 							if (nextChar == 0) {
 								startTime = System.currentTimeMillis();
 							}
-							clickEffect.playAsSoundEffect(1f, 0.3f, false);
+							if (kchar == ' ')
+								click2Effect.playAsSoundEffect(1f, 0.3f, false);
+							else
+								clickEffect.playAsSoundEffect(1f, 0.3f, false);
 							nextChar++;
 							if (nextChar == challengeText.length()) {
 								nextChar = 0;
