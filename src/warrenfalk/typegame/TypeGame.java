@@ -100,7 +100,7 @@ public class TypeGame {
 								long elapsed = System.currentTimeMillis() - startTime;
 								boolean success = elapsed <= msToWin;
 								if (success) {
-									successEffect.playAsSoundEffect(1f, 1f, false);
+									successEffect.playAsSoundEffect(1f, 0.6f, false);
 									tries = 0;
 									level++;
 									challengeText = getChallengeText(level);
@@ -256,7 +256,7 @@ public class TypeGame {
 	}
 	
 	private static String[] loadChallenges() throws IOException {
-		InputStream in = ResourceLoader.getResourceAsStream("levels/sayings.txt");
+		InputStream in = ResourceLoader.getResourceAsStream("levels/progression.txt");
 		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 		ArrayList<String> lines = new ArrayList<String>();
 		String line = null;

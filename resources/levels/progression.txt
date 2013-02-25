@@ -1,0 +1,43 @@
+a
+e
+a e
+e a
+a e a e
+i
+e i
+e i e i
+a e i a e i
+o
+o i
+o a
+o e o a o i
+u
+o u
+u a
+a u
+a u i o
+a e i o u
+u o i e a 
+ea
+ea io
+ea io au
+ea io au eau
+ea io au eau ie
+ea io au eau ie ei
+ea io au eau ie ei
+ea io au eau ie ei oi
+io au eau ie ei oi ea
+au eau ie ei oi ea io
+eau ie ei oi ea io au
+ie ei oi ea io au eau
+ei oi ea io au eau ie
+oi ea io au eau ie ei
+ee io ie ei eau au ea
+ee oo io ei eau au ea
+ee oo ou ei io oi au
+ee oo ou ia io ea eau
+ee oo ou ia ai oi ea
+ee oo ou ia ai ui ui
+ui ee oo ou ia ai ui
+ai ui ia ou oo ee eau
+ea io au eau ie ei oi ee oo ou ia ai ui
