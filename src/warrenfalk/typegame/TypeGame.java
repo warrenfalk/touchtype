@@ -4,9 +4,13 @@ import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.font.FontRenderContext;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.nio.IntBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -73,7 +77,7 @@ public class TypeGame {
 		float cursorPosition = 0f;
 		float idealOffset = -(width * 0.3f);
 		float textLinePosition = idealOffset;
-		int level = 0;
+		int level = readLastLevel();
 		int nextChar = 0;
 		
 		int tries = 0;
@@ -107,6 +111,7 @@ public class TypeGame {
 									successEffect.playAsSoundEffect(1f, 0.6f, false);
 									tries = 0;
 									level++;
+									saveLevel(level);
 									challengeText = getChallengeText(level);
 									msToWin = calcWinTime(challengeText);
 								}
@@ -236,6 +241,42 @@ public class TypeGame {
 				System.exit(0);
 			}
 		}
+	}
+	
+	private static int readLastLevel() throws IOException {
+		File level = getLevelSaveFile();
+		if (!level.isFile())
+			return 0;
+		BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(level)));
+		try {
+			String line;
+			while (null != (line = reader.readLine())) {
+				return Integer.parseInt(line);
+			}
+			return 0;
+		}
+		finally {
+			reader.close();
+		}
+	}
+	
+	private static void saveLevel(int levelNum) throws FileNotFoundException {
+		File level = getLevelSaveFile();
+		level.getParentFile().mkdirs();
+		PrintWriter pw = new PrintWriter(level);
+		try {
+			pw.println(levelNum);
+		}
+		finally {
+			pw.close();
+		}
+	}
+	
+	private static File getLevelSaveFile() {
+		File userHome = new File(System.getProperty("user.home"));
+		File settings = new File(userHome, ".touchtype");
+		File level = new File(settings, "level");
+		return level;
 	}
 	
 	private static long calcWinTime(String challengeText) {
