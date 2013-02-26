@@ -193,6 +193,7 @@ public class TypeGame {
 			GL11.glPopMatrix(); // restore view matrix
 			
 			// cursor -> current character 
+			/*
 			GL11.glPushMatrix(); // save view matrix
 			String nextCharString = challengeText.substring(nextChar, nextChar + 1);
 			float nextCharScale = 2f;
@@ -206,6 +207,7 @@ public class TypeGame {
 			GL11.glColor4f(1f, 0f, 0f, 0.8f);
 			font.render(nextCharString);
 			GL11.glPopMatrix(); // restore view matrix
+			*/
 
 			// status text
 			GL11.glPushMatrix(); // save view matrix
@@ -225,8 +227,22 @@ public class TypeGame {
 			
 			// text
 			GL11.glPushMatrix(); // save view matrix
+			// whitish completed text
+			GL11.glColor4f(0.8f, 0.8f, 0.8f, 1f);
+			String before = challengeText.substring(0, nextChar);
+			String next = challengeText.substring(nextChar, nextChar + 1);
+			String after = challengeText.substring(nextChar + 1);
+			float advance = font.advance(before);
+			font.render(before);
+			// red current character
+			GL11.glColor4f(1f, 0f, 0f, 1f);
+			GL11.glTranslatef(advance, 0f, 0f);
+			advance = font.advance(next);
+			font.render(next);
+			// black future characters
 			GL11.glColor4f(0f, 0f, 0f, 1f);
-			font.render(challengeText);
+			GL11.glTranslatef(advance, 0f, 0f);
+			font.render(after);
 			GL11.glPopMatrix(); // restore view matrix
 			
 			// end scene
