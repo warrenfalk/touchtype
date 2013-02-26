@@ -94,7 +94,10 @@ public class TypeGame {
 					if (kchar != 0) {
 						kchar = Character.toLowerCase(kchar);
 						char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
-						if (kchar == cchar) {
+						if (nextChar == 0 && cchar != ' ' && (kchar == ' ' || kchar == '.')) {
+							// ignore
+						}
+						else if (kchar == cchar) {
 							if (nextChar == 0) {
 								startTime = System.currentTimeMillis();
 							}
