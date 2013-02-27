@@ -152,6 +152,8 @@ public class TypeGame {
 		int nextChar = 0;
 		float fingerFade = 0f;
 		float fingerAlpha = 0f;
+		float keyboardAlpha = 0f;
+		int keyboardDelay = 120;
 		
 		int tries = 0;
 		long startTime = 0L;
@@ -198,7 +200,10 @@ public class TypeGame {
 								startTime = 0L;
 							}
 							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
-							fingerFade = 0; // reset finger fade cycle on success
+							// reset keyboard on success
+							fingerFade = 0;
+							keyboardAlpha = 0f;
+							keyboardDelay = 120;
 						}
 						else {
 							buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
@@ -221,6 +226,10 @@ public class TypeGame {
 				fingerFade = 0f;
 			fingerAlpha = 0.2f + 0.8f * (float)Math.sin(fingerFade * (float)Math.PI);
 			fingerFade = fingerFade + 0.01f;
+			if (keyboardDelay > 0)
+				keyboardDelay--;
+			else if (keyboardAlpha < 1f)
+				keyboardAlpha += 0.02f;
 			
 			GL11.glMatrixMode(GL11.GL_MODELVIEW);
 			GL11.glPushMatrix(); // save base view matrix
@@ -330,7 +339,8 @@ public class TypeGame {
 			float keyStride = 28f;
 			float keySpace = 4f;
 			for (Key key : keys) {
-				GL11.glColor4f(0f, 0.3f, 0.9f, Keyboard.isKeyDown(key.key) ? 1f : 0.2f);
+				float keyAlpha = Keyboard.isKeyDown(key.key) ? 1f : 0.2f;
+				GL11.glColor4f(0f, 0.3f, 0.9f, keyAlpha * keyboardAlpha);
 				GL11.glLoadIdentity();
 				GL11.glTranslatef(key.x * keyStride, -120f + key.y * keyStride, 0f);
 				drawKeyShape(keyStride * key.w - keySpace, keyStride - keySpace);
@@ -345,7 +355,7 @@ public class TypeGame {
 				GL11.glLoadIdentity();
 				GL11.glTranslatef(key.x * keyStride, -120f + key.y * keyStride, 0f);
 				float alpha = ckey.finger == i ? fingerAlpha : 0.2f;
-				GL11.glColor4f(0f, 0f, 0f, alpha);
+				GL11.glColor4f(0f, 0f, 0f, alpha * keyboardAlpha);
 				drawFingerShape(keyStride - keySpace - 5f);
 			}
 			GL11.glPopMatrix(); // restore view matrix
