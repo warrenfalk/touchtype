@@ -374,13 +374,37 @@ public class TypeGame {
 			// reset all fingers to home positions
 			for (int i = 0; i < fingers.length; i++)
 				fingers[i] = fingerHomes[i];
+			// move the finger for the current character
 			Key ckey = Key.byChar.get(cchar);
 			fingers[ckey.finger] = ckey.key;
+			// draw the finger positions
 			for (int i = 0; i < fingers.length; i++) {
 				Key key = Key.byKey.get(fingers[i]);
 				GL11.glLoadIdentity();
 				GL11.glTranslatef(key.x * keyStride, -120f + key.y * keyStride, 0f);
-				float alpha = ckey.finger == i ? fingerAlpha : 0.2f;
+				float alpha;
+				if (ckey.finger == i) {
+					// this is the finger for the current character
+					alpha = fingerAlpha;
+					// if this is not a home position, draw an arrow
+					if (ckey.key != fingerHomes[i]) {
+						Key homeKey = Key.byKey.get(fingerHomes[i]);
+						float dx = (homeKey.x - ckey.x);
+						float dy = (homeKey.y- ckey.y);
+						float mag = (float)Math.sqrt(dx * dx + dy * dy);
+						float ndx = dx / mag;
+						float ndy = dy / mag;
+						GL11.glLineWidth(3f);
+						GL11.glBegin(GL11.GL_LINES);
+						GL11.glVertex3f(ndx * 10f, ndy * 10f, 0f);
+						GL11.glVertex3f(dx * keyStride, dy * keyStride, 0f);
+						GL11.glEnd();
+					}
+				}
+				else {
+					// not the finger for the current character
+					alpha = 0.2f;
+				}
 				GL11.glColor4f(0f, 0f, 0f, alpha * keyboardAlpha);
 				drawFingerShape(keyStride - keySpace - 5f);
 			}
