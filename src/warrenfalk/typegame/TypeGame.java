@@ -150,6 +150,8 @@ public class TypeGame {
 		float textLinePosition = idealOffset;
 		int level = readLastLevel();
 		int nextChar = 0;
+		float fingerFade = 0f;
+		float fingerAlpha = 0f;
 		
 		int tries = 0;
 		long startTime = 0L;
@@ -196,6 +198,7 @@ public class TypeGame {
 								startTime = 0L;
 							}
 							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+							fingerFade = 0; // reset finger fade cycle on success
 						}
 						else {
 							buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
@@ -214,6 +217,10 @@ public class TypeGame {
 			float textLineDiff = idealTextLinePosition - textLinePosition;
 			float textLineMove = textLineDiff * 0.07f;
 			textLinePosition = textLinePosition + textLineMove;
+			if (fingerFade >= 1f)
+				fingerFade = 0f;
+			fingerAlpha = 0.2f + 0.8f * (float)Math.sin(fingerFade * (float)Math.PI);
+			fingerFade = fingerFade + 0.01f;
 			
 			GL11.glMatrixMode(GL11.GL_MODELVIEW);
 			GL11.glPushMatrix(); // save base view matrix
@@ -337,7 +344,7 @@ public class TypeGame {
 				Key key = Key.byKey.get(fingers[i]);
 				GL11.glLoadIdentity();
 				GL11.glTranslatef(key.x * keyStride, -120f + key.y * keyStride, 0f);
-				float alpha = ckey.finger == i ? 1f : 0.2f;
+				float alpha = ckey.finger == i ? fingerAlpha : 0.2f;
 				GL11.glColor4f(0f, 0f, 0f, alpha);
 				drawFingerShape(keyStride - keySpace - 5f);
 			}
