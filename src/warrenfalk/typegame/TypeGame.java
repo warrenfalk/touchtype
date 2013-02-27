@@ -11,21 +11,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.nio.IntBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 
-import org.lwjgl.BufferUtils;
 import org.lwjgl.font.glfont.FTFont;
 import org.lwjgl.font.glfont.FTGLPolygonFont;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.openal.AL;
-import org.lwjgl.openal.AL10;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.PixelFormat;
-import org.lwjgl.util.WaveData;
 import org.newdawn.slick.openal.Audio;
 import org.newdawn.slick.openal.AudioLoader;
 import org.newdawn.slick.util.ResourceLoader;
@@ -33,6 +30,64 @@ import org.newdawn.slick.util.ResourceLoader;
 public class TypeGame {
 	
 	static String[] challenges;
+	
+	static Key[] keys = new Key[] {
+		new Key(Keyboard.KEY_A, 'a', -4.5f, 0f, 1f),
+		new Key(Keyboard.KEY_S, 's', -3.5f, 0f, 1f),
+		new Key(Keyboard.KEY_D, 'd', -2.5f, 0f, 1f),
+		new Key(Keyboard.KEY_F, 'f', -1.5f, 0f, 1f),
+		new Key(Keyboard.KEY_G, 'g', -0.5f, 0f, 1f),
+		new Key(Keyboard.KEY_H, 'h', 0.5f, 0f, 1f),
+		new Key(Keyboard.KEY_J, 'j', 1.5f, 0f, 1f),
+		new Key(Keyboard.KEY_K, 'k', 2.5f, 0f, 1f),
+		new Key(Keyboard.KEY_L, 'l', 3.5f, 0f, 1f),
+		new Key(Keyboard.KEY_SEMICOLON, ';', 4.5f, 0f, 1f),
+		new Key(Keyboard.KEY_APOSTROPHE, '\'', 5.5f, 0f, 1f),
+
+		new Key(Keyboard.KEY_Q, 'q', -4.8f, 1f, 1f),
+		new Key(Keyboard.KEY_W, 'w', -3.8f, 1f, 1f),
+		new Key(Keyboard.KEY_E, 'e', -2.8f, 1f, 1f),
+		new Key(Keyboard.KEY_R, 'r', -1.8f, 1f, 1f),
+		new Key(Keyboard.KEY_T, 't', -0.8f, 1f, 1f),
+		new Key(Keyboard.KEY_Y, 'y', 0.2f, 1f, 1f),
+		new Key(Keyboard.KEY_U, 'u', 1.2f, 1f, 1f),
+		new Key(Keyboard.KEY_I, 'i', 2.2f, 1f, 1f),
+		new Key(Keyboard.KEY_O, 'o', 3.2f, 1f, 1f),
+		new Key(Keyboard.KEY_P, 'p', 4.2f, 1f, 1f),
+
+		new Key(Keyboard.KEY_Z, 'z', -4f, -1f, 1f),
+		new Key(Keyboard.KEY_X, 'x', -3f, -1f, 1f),
+		new Key(Keyboard.KEY_C, 'c', -2f, -1f, 1f),
+		new Key(Keyboard.KEY_V, 'v', -1f, -1f, 1f),
+		new Key(Keyboard.KEY_B, 'b', 0f, -1f, 1f),
+		new Key(Keyboard.KEY_N, 'n', 1f, -1f, 1f),
+		new Key(Keyboard.KEY_M, 'm', 2f, -1f, 1f),
+		new Key(Keyboard.KEY_COMMA, ',', 3f, -1f, 1f),
+		new Key(Keyboard.KEY_PERIOD, '.', 4f, -1f, 1f),
+		
+		new Key(Keyboard.KEY_SPACE, ' ', 0f, -2f, 5f),
+	};
+	
+	static class Key {
+		final int key;
+		final char ch;
+		final float x;
+		final float y;
+		final float w;
+		
+		final static HashMap<Integer,Key> byKey = new HashMap<Integer,Key>();
+		final static HashMap<Character,Key> byChar = new HashMap<Character,Key>();
+		
+		Key(int key, char ch, float x, float y, float w) {
+			this.key = key;
+			this.ch = ch;
+			this.x = x;
+			this.y = y;
+			this.w = w;
+			byKey.put(key, this);
+			byChar.put(ch, this);
+		}
+	}
 
 	public static void main(String[] args) throws Exception {
 		int width = 1066;
@@ -248,6 +303,17 @@ public class TypeGame {
 			font.render(after);
 			GL11.glPopMatrix(); // restore view matrix
 			
+			GL11.glPushMatrix(); // save view matrix
+			GL11.glColor4f(0f, 0.3f, 0.9f, 0.2f);
+			float keyStride = 28f;
+			float keySpace = 4f;
+			for (Key key : keys) {
+				GL11.glLoadIdentity();
+				GL11.glTranslatef(key.x * keyStride, -120f + key.y * keyStride, 0f);
+				drawKeyShape(keyStride * key.w - keySpace, keyStride - keySpace);
+			}
+			GL11.glPopMatrix(); // restore view matrix
+			
 			// end scene
 			GL11.glPopMatrix(); // restore base view matrix
 
@@ -262,6 +328,58 @@ public class TypeGame {
 		}
 	}
 	
+	private static void drawKeyShape(float width, float height) {
+		float corner = 3f;
+		float outerx = width / 2f;
+		float outery = height / 2f;
+		float innerx = outerx - corner;
+		float innery = outery - corner;
+		float rx0 = innerx + 2f * (float)Math.cos(0.78539815);
+		float ry0 = innery + 2f * (float)Math.sin(0.78539815);
+		GL11.glBegin(GL11.GL_QUADS);
+		// main square (plus left/right edges)
+		GL11.glVertex3f(-outerx, -innery, 0f);
+		GL11.glVertex3f(-outerx, innery, 0f);
+		GL11.glVertex3f(outerx, innery, 0f);
+		GL11.glVertex3f(outerx, -innery, 0f);
+		// top edge
+		GL11.glVertex3f(-innerx, -outery, 0f);
+		GL11.glVertex3f(-innerx, -innery, 0f);
+		GL11.glVertex3f(innerx, -innery, 0f);
+		GL11.glVertex3f(innerx, -outery, 0f);
+		// bottom edge
+		GL11.glVertex3f(-innerx, innery, 0f);
+		GL11.glVertex3f(-innerx, outery, 0f);
+		GL11.glVertex3f(innerx, outery, 0f);
+		GL11.glVertex3f(innerx, innery, 0f);
+		GL11.glEnd();
+		// corners
+		GL11.glBegin(GL11.GL_TRIANGLE_FAN);
+		GL11.glVertex3f(-innerx, -innery, 0);
+		GL11.glVertex3f(-innerx, -outery, 0f);
+		GL11.glVertex3f(-rx0, -ry0, 0f);
+		GL11.glVertex3f(-outerx, -innery, 0f);
+		GL11.glEnd();
+		GL11.glBegin(GL11.GL_TRIANGLE_FAN);
+		GL11.glVertex3f(-innerx, innery, 0);
+		GL11.glVertex3f(-innerx, outery, 0f);
+		GL11.glVertex3f(-rx0, ry0, 0f);
+		GL11.glVertex3f(-outerx, innery, 0f);
+		GL11.glEnd();
+		GL11.glBegin(GL11.GL_TRIANGLE_FAN);
+		GL11.glVertex3f(innerx, innery, 0);
+		GL11.glVertex3f(innerx, outery, 0f);
+		GL11.glVertex3f(rx0, ry0, 0f);
+		GL11.glVertex3f(outerx, innery, 0f);
+		GL11.glEnd();
+		GL11.glBegin(GL11.GL_TRIANGLE_FAN);
+		GL11.glVertex3f(innerx, -innery, 0);
+		GL11.glVertex3f(innerx, -outery, 0f);
+		GL11.glVertex3f(rx0, -ry0, 0f);
+		GL11.glVertex3f(outerx, -innery, 0f);
+		GL11.glEnd();
+	}
+
 	private static int readLastLevel() throws IOException {
 		File level = getLevelSaveFile();
 		if (!level.isFile())
