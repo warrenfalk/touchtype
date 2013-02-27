@@ -82,6 +82,9 @@ public class TypeGame {
 	
 	final static int[] fingers = new int[fingerHomes.length];
 	
+	final static int STATE_WAIT_FOR_READY = 0;
+	final static int STATE_PLAYING = 1;
+	
 	static class Key {
 		final int key;
 		final char ch;
@@ -144,16 +147,23 @@ public class TypeGame {
 		Audio buzzerEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/buzzer.wav"));
 		Audio bellEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/bell.wav"));
 		Audio successEffect = AudioLoader.getAudio("WAV", ResourceLoader.getResourceAsStream("sounds/success.wav"));
+		
+		String readyPrompt = "Press F and J simultaneously when ready";
 
 		float cursorPosition = 0f;
 		float idealOffset = -(width * 0.3f);
 		float textLinePosition = idealOffset;
 		int level = readLastLevel();
 		int nextChar = 0;
+		boolean typo = false;
 		float fingerFade = 0f;
 		float fingerAlpha = 0f;
 		float keyboardAlpha = 0f;
 		int keyboardDelay = 120;
+		int state = STATE_WAIT_FOR_READY;
+		boolean readyKeysDown = false;
+		boolean jk = false;
+		boolean fk = false;
 		
 		int tries = 0;
 		long startTime = 0L;
@@ -162,58 +172,69 @@ public class TypeGame {
 		long msToWin = calcWinTime(challengeText);
 		cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 		while (true) {
-			// process input
 			char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
-			while (Keyboard.next()) {
-				if (Keyboard.getEventKeyState()) {
-					char kchar = Keyboard.getEventCharacter();
-					if (kchar != 0) {
-						kchar = Character.toLowerCase(kchar);
-						if (nextChar == 0 && cchar != ' ' && (kchar == ' ' || kchar == '.')) {
-							// ignore
-						}
-						else if (kchar == cchar) {
-							if (nextChar == 0) {
-								startTime = System.currentTimeMillis();
+			// process input
+			if (state == STATE_PLAYING) {
+				while (Keyboard.next()) {
+					if (Keyboard.getEventKeyState()) {
+						char kchar = Keyboard.getEventCharacter();
+						if (kchar != 0) {
+							kchar = Character.toLowerCase(kchar);
+							if (nextChar == 0 && cchar != ' ' && (kchar == ' ' || kchar == '.')) {
+								// ignore
 							}
-							if (kchar == ' ')
-								click2Effect.playAsSoundEffect(1f, 0.3f, false);
-							else
-								clickEffect.playAsSoundEffect(1f, 0.3f, false);
-							nextChar++;
-							if (nextChar == challengeText.length()) {
-								nextChar = 0;
-								long elapsed = System.currentTimeMillis() - startTime;
-								boolean success = elapsed <= msToWin;
-								if (success) {
-									successEffect.playAsSoundEffect(1f, 0.6f, false);
-									tries = 0;
-									level++;
-									saveLevel(level);
-									challengeText = getChallengeText(level);
-									msToWin = calcWinTime(challengeText);
+							else if (kchar == cchar) {
+								if (nextChar == 0) {
+									startTime = System.currentTimeMillis();
 								}
-								else {
-									tries++;
-									bellEffect.playAsSoundEffect(1f, 1f, false);
+								if (kchar == ' ')
+									click2Effect.playAsSoundEffect(1f, 0.3f, false);
+								else
+									clickEffect.playAsSoundEffect(1f, 0.3f, false);
+								nextChar++;
+								if (nextChar == challengeText.length()) {
+									nextChar = 0;
+									long elapsed = System.currentTimeMillis() - startTime;
+									boolean success = !typo && elapsed <= msToWin;
+									if (success) {
+										successEffect.playAsSoundEffect(1f, 0.6f, false);
+										tries = 0;
+										level++;
+										saveLevel(level);
+										challengeText = getChallengeText(level);
+										msToWin = calcWinTime(challengeText);
+									}
+									else {
+										tries++;
+										bellEffect.playAsSoundEffect(1f, 1f, false);
+									}
+									startTime = 0L;
+									typo = false;
 								}
-								startTime = 0L;
+								cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+								// reset keyboard on success
+								fingerFade = 0;
+								keyboardAlpha = 0f;
+								keyboardDelay = 120;
 							}
-							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
-							// reset keyboard on success
-							fingerFade = 0;
-							keyboardAlpha = 0f;
-							keyboardDelay = 120;
-						}
-						else {
-							buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
-							startTime = 0L;
-							if (nextChar > 0)
-								tries++;
-							nextChar = 0;
-							cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+							else {
+								buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
+								keyboardDelay = 0;
+								if (nextChar > 0)
+									typo = true;
+							}
 						}
 					}
+				}
+			}
+			else if (state == STATE_WAIT_FOR_READY) {
+				while (Keyboard.next()) ;
+				jk = Keyboard.isKeyDown(Keyboard.KEY_J);
+				fk = Keyboard.isKeyDown(Keyboard.KEY_F);
+				readyKeysDown = readyKeysDown || jk && fk;
+				if (readyKeysDown == true && jk == false && fk == false) {
+					state = STATE_PLAYING;
+					readyKeysDown = false;
 				}
 			}
 			
@@ -222,14 +243,16 @@ public class TypeGame {
 			float textLineDiff = idealTextLinePosition - textLinePosition;
 			float textLineMove = textLineDiff * 0.07f;
 			textLinePosition = textLinePosition + textLineMove;
-			if (fingerFade >= 1f)
-				fingerFade = 0f;
-			fingerAlpha = 0.2f + 0.8f * (float)Math.sin(fingerFade * (float)Math.PI);
-			fingerFade = fingerFade + 0.01f;
-			if (keyboardDelay > 0)
-				keyboardDelay--;
-			else if (keyboardAlpha < 1f)
-				keyboardAlpha += 0.02f;
+			if (state == STATE_PLAYING) {
+				if (fingerFade >= 1f)
+					fingerFade = 0f;
+				fingerAlpha = 0.2f + 0.8f * (float)Math.sin(fingerFade * (float)Math.PI);
+				fingerFade = fingerFade + 0.01f;
+				if (keyboardDelay > 0)
+					keyboardDelay--;
+				else if (keyboardAlpha < 1f)
+					keyboardAlpha += 0.02f;
+			}
 			
 			GL11.glMatrixMode(GL11.GL_MODELVIEW);
 			GL11.glPushMatrix(); // save base view matrix
@@ -307,6 +330,9 @@ public class TypeGame {
 			if (startTime == 0) {
 				time = "0.0 secs";
 			}
+			else if (typo) {
+				time = "--- secs";
+			}
 			else {
 				long elapsed = System.currentTimeMillis() - startTime;
 				time = secondsFormat.format((double)elapsed / 1000.0) + " secs";
@@ -359,6 +385,60 @@ public class TypeGame {
 				drawFingerShape(keyStride - keySpace - 5f);
 			}
 			GL11.glPopMatrix(); // restore view matrix
+			
+			// show wait-for-ready overlay
+			if (state == STATE_WAIT_FOR_READY) {
+				GL11.glMatrixMode(GL11.GL_PROJECTION);
+				GL11.glPushMatrix();
+				GL11.glLoadIdentity();
+				GL11.glMatrixMode(GL11.GL_MODELVIEW);
+				GL11.glPushMatrix();
+				GL11.glLoadIdentity();
+				GL11.glBegin(GL11.GL_QUADS);
+				GL11.glColor4f(0f, 0f, 0f, 0.87f);
+				GL11.glVertex2f(-1f, -1f);
+				GL11.glVertex2f(1f, -1f);
+				GL11.glColor4f(0f, 0f, 0f, 0.87f);
+				GL11.glVertex2f(1f, 1f);
+				GL11.glVertex2f(-1f, 1f);
+				GL11.glEnd();
+				GL11.glPopMatrix();
+				GL11.glMatrixMode(GL11.GL_PROJECTION);
+				GL11.glPopMatrix();
+				GL11.glMatrixMode(GL11.GL_MODELVIEW);
+				
+				GL11.glPushMatrix();
+				// show F/J key images
+				GL11.glLoadIdentity();
+				GL11.glTranslatef(100f, 0f, 0f);
+				if (jk)
+					GL11.glColor4f(0.5f, 0.7f, 1f, 1f);
+				else
+					GL11.glColor4f(0.6f, 0.6f, 0.6f, 1f);
+				drawKeyShape(90f, 90f);
+				GL11.glTranslatef(-font.advance("J") / 2f, -font.ascender() / 2, 0f);
+				GL11.glColor4f(0f, 0f, 0f, 1f);
+				font.render("J");
+				GL11.glLoadIdentity();
+				GL11.glTranslatef(-100f, 0f, 0f);
+				if (fk)
+					GL11.glColor4f(0.5f, 0.7f, 1f, 1f);
+				else
+					GL11.glColor4f(0.6f, 0.6f, 0.6f, 1f);
+				drawKeyShape(90f, 90f);
+				GL11.glTranslatef(-font.advance("F") / 2f, -font.ascender() / 2, 0f);
+				GL11.glColor4f(0f, 0f, 0f, 1f);
+				font.render("F");
+				
+				// show prompt text
+				GL11.glLoadIdentity();
+				GL11.glScalef(1.5f, 1.5f, 0f);
+				GL11.glTranslatef(-statusFont.advance(readyPrompt) / 2f, 100f, 0);
+				GL11.glColor4f(0.6f, 0.6f, 0.6f, 1f);
+				statusFont.render(readyPrompt);
+				
+				GL11.glPopMatrix();
+			}
 			
 			// end scene
 			GL11.glPopMatrix(); // restore base view matrix
