@@ -32,41 +32,55 @@ public class TypeGame {
 	static String[] challenges;
 	
 	static Key[] keys = new Key[] {
-		new Key(Keyboard.KEY_A, 'a', -4.5f, 0f, 1f),
-		new Key(Keyboard.KEY_S, 's', -3.5f, 0f, 1f),
-		new Key(Keyboard.KEY_D, 'd', -2.5f, 0f, 1f),
-		new Key(Keyboard.KEY_F, 'f', -1.5f, 0f, 1f),
-		new Key(Keyboard.KEY_G, 'g', -0.5f, 0f, 1f),
-		new Key(Keyboard.KEY_H, 'h', 0.5f, 0f, 1f),
-		new Key(Keyboard.KEY_J, 'j', 1.5f, 0f, 1f),
-		new Key(Keyboard.KEY_K, 'k', 2.5f, 0f, 1f),
-		new Key(Keyboard.KEY_L, 'l', 3.5f, 0f, 1f),
-		new Key(Keyboard.KEY_SEMICOLON, ';', 4.5f, 0f, 1f),
-		new Key(Keyboard.KEY_APOSTROPHE, '\'', 5.5f, 0f, 1f),
+		new Key(Keyboard.KEY_A, 'a', -4.5f, 0f, 1f, 1),
+		new Key(Keyboard.KEY_S, 's', -3.5f, 0f, 1f, 2),
+		new Key(Keyboard.KEY_D, 'd', -2.5f, 0f, 1f, 3),
+		new Key(Keyboard.KEY_F, 'f', -1.5f, 0f, 1f, 4),
+		new Key(Keyboard.KEY_G, 'g', -0.5f, 0f, 1f, 4),
+		new Key(Keyboard.KEY_H, 'h', 0.5f, 0f, 1f, 5),
+		new Key(Keyboard.KEY_J, 'j', 1.5f, 0f, 1f, 5),
+		new Key(Keyboard.KEY_K, 'k', 2.5f, 0f, 1f, 6),
+		new Key(Keyboard.KEY_L, 'l', 3.5f, 0f, 1f, 7),
+		new Key(Keyboard.KEY_SEMICOLON, ';', 4.5f, 0f, 1f, 8),
+		new Key(Keyboard.KEY_APOSTROPHE, '\'', 5.5f, 0f, 1f, 8),
 
-		new Key(Keyboard.KEY_Q, 'q', -4.8f, 1f, 1f),
-		new Key(Keyboard.KEY_W, 'w', -3.8f, 1f, 1f),
-		new Key(Keyboard.KEY_E, 'e', -2.8f, 1f, 1f),
-		new Key(Keyboard.KEY_R, 'r', -1.8f, 1f, 1f),
-		new Key(Keyboard.KEY_T, 't', -0.8f, 1f, 1f),
-		new Key(Keyboard.KEY_Y, 'y', 0.2f, 1f, 1f),
-		new Key(Keyboard.KEY_U, 'u', 1.2f, 1f, 1f),
-		new Key(Keyboard.KEY_I, 'i', 2.2f, 1f, 1f),
-		new Key(Keyboard.KEY_O, 'o', 3.2f, 1f, 1f),
-		new Key(Keyboard.KEY_P, 'p', 4.2f, 1f, 1f),
+		new Key(Keyboard.KEY_Q, 'q', -4.8f, 1f, 1f, 1),
+		new Key(Keyboard.KEY_W, 'w', -3.8f, 1f, 1f, 2),
+		new Key(Keyboard.KEY_E, 'e', -2.8f, 1f, 1f, 3),
+		new Key(Keyboard.KEY_R, 'r', -1.8f, 1f, 1f, 4),
+		new Key(Keyboard.KEY_T, 't', -0.8f, 1f, 1f, 4),
+		new Key(Keyboard.KEY_Y, 'y', 0.2f, 1f, 1f, 5),
+		new Key(Keyboard.KEY_U, 'u', 1.2f, 1f, 1f, 5),
+		new Key(Keyboard.KEY_I, 'i', 2.2f, 1f, 1f, 6),
+		new Key(Keyboard.KEY_O, 'o', 3.2f, 1f, 1f, 7),
+		new Key(Keyboard.KEY_P, 'p', 4.2f, 1f, 1f, 8),
 
-		new Key(Keyboard.KEY_Z, 'z', -4f, -1f, 1f),
-		new Key(Keyboard.KEY_X, 'x', -3f, -1f, 1f),
-		new Key(Keyboard.KEY_C, 'c', -2f, -1f, 1f),
-		new Key(Keyboard.KEY_V, 'v', -1f, -1f, 1f),
-		new Key(Keyboard.KEY_B, 'b', 0f, -1f, 1f),
-		new Key(Keyboard.KEY_N, 'n', 1f, -1f, 1f),
-		new Key(Keyboard.KEY_M, 'm', 2f, -1f, 1f),
-		new Key(Keyboard.KEY_COMMA, ',', 3f, -1f, 1f),
-		new Key(Keyboard.KEY_PERIOD, '.', 4f, -1f, 1f),
+		new Key(Keyboard.KEY_Z, 'z', -4f, -1f, 1f, 2),
+		new Key(Keyboard.KEY_X, 'x', -3f, -1f, 1f, 3),
+		new Key(Keyboard.KEY_C, 'c', -2f, -1f, 1f, 4),
+		new Key(Keyboard.KEY_V, 'v', -1f, -1f, 1f, 4),
+		new Key(Keyboard.KEY_B, 'b', 0f, -1f, 1f, 4),
+		new Key(Keyboard.KEY_N, 'n', 1f, -1f, 1f, 5),
+		new Key(Keyboard.KEY_M, 'm', 2f, -1f, 1f, 5),
+		new Key(Keyboard.KEY_COMMA, ',', 3f, -1f, 1f, 6),
+		new Key(Keyboard.KEY_PERIOD, '.', 4f, -1f, 1f, 7),
 		
-		new Key(Keyboard.KEY_SPACE, ' ', 0f, -2f, 5f),
+		new Key(Keyboard.KEY_SPACE, ' ', 0f, -2f, 5f, 0),
 	};
+	
+	final static int[] fingerHomes = new int[] {
+		Keyboard.KEY_SPACE,
+		Keyboard.KEY_A,
+		Keyboard.KEY_S,
+		Keyboard.KEY_D,
+		Keyboard.KEY_F,
+		Keyboard.KEY_J,
+		Keyboard.KEY_K,
+		Keyboard.KEY_L,
+		Keyboard.KEY_SEMICOLON,
+	};
+	
+	final static int[] fingers = new int[fingerHomes.length];
 	
 	static class Key {
 		final int key;
@@ -74,16 +88,18 @@ public class TypeGame {
 		final float x;
 		final float y;
 		final float w;
+		final int finger;
 		
 		final static HashMap<Integer,Key> byKey = new HashMap<Integer,Key>();
 		final static HashMap<Character,Key> byChar = new HashMap<Character,Key>();
 		
-		Key(int key, char ch, float x, float y, float w) {
+		Key(int key, char ch, float x, float y, float w, int finger) {
 			this.key = key;
 			this.ch = ch;
 			this.x = x;
 			this.y = y;
 			this.w = w;
+			this.finger = finger;
 			byKey.put(key, this);
 			byChar.put(ch, this);
 		}
@@ -143,12 +159,12 @@ public class TypeGame {
 		cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 		while (true) {
 			// process input
+			char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
 			while (Keyboard.next()) {
 				if (Keyboard.getEventKeyState()) {
 					char kchar = Keyboard.getEventCharacter();
 					if (kchar != 0) {
 						kchar = Character.toLowerCase(kchar);
-						char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
 						if (nextChar == 0 && cchar != ' ' && (kchar == ' ' || kchar == '.')) {
 							// ignore
 						}
@@ -304,13 +320,26 @@ public class TypeGame {
 			GL11.glPopMatrix(); // restore view matrix
 			
 			GL11.glPushMatrix(); // save view matrix
-			GL11.glColor4f(0f, 0.3f, 0.9f, 0.2f);
 			float keyStride = 28f;
 			float keySpace = 4f;
 			for (Key key : keys) {
+				GL11.glColor4f(0f, 0.3f, 0.9f, Keyboard.isKeyDown(key.key) ? 1f : 0.2f);
 				GL11.glLoadIdentity();
 				GL11.glTranslatef(key.x * keyStride, -120f + key.y * keyStride, 0f);
 				drawKeyShape(keyStride * key.w - keySpace, keyStride - keySpace);
+			}
+			// reset all fingers to home positions
+			for (int i = 0; i < fingers.length; i++)
+				fingers[i] = fingerHomes[i];
+			Key ckey = Key.byChar.get(cchar);
+			fingers[ckey.finger] = ckey.key;
+			for (int i = 0; i < fingers.length; i++) {
+				Key key = Key.byKey.get(fingers[i]);
+				GL11.glLoadIdentity();
+				GL11.glTranslatef(key.x * keyStride, -120f + key.y * keyStride, 0f);
+				float alpha = ckey.finger == i ? 1f : 0.2f;
+				GL11.glColor4f(0f, 0f, 0f, alpha);
+				drawFingerShape(keyStride - keySpace - 5f);
 			}
 			GL11.glPopMatrix(); // restore view matrix
 			
@@ -328,6 +357,22 @@ public class TypeGame {
 		}
 	}
 	
+	// TODO: create display list or vbo
+	private static void drawFingerShape(float diameter) {
+		float outer = diameter / 2f;
+		float inner = outer - 4f;
+		GL11.glBegin(GL11.GL_TRIANGLE_FAN);
+		GL11.glVertex3f(0f, 0f, 0f);
+		float segments = 16f;
+		float step = 2f * (float)Math.PI / segments;
+		for (float a = 0f; a <= segments; a++) {
+			float ar = a * step;
+			GL11.glVertex3f((float)Math.cos(ar) * outer, -(float)Math.sin(ar) * outer, 0f);
+		}
+		GL11.glEnd();
+	}
+
+	// TODO: create display list or vbo
 	private static void drawKeyShape(float width, float height) {
 		float corner = 3f;
 		float outerx = width / 2f;
