@@ -217,6 +217,13 @@ public class TypeGame {
 									keyboardAlpha = 0f;
 									keyboardDelay = 120;
 								}
+								else if (Keyboard.getEventKey() == Keyboard.KEY_ESCAPE) {
+									// reset level
+									typo = false;
+									startTime = 0L;
+									nextChar = 0;
+									cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+								}
 								else {
 									buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
 									keyboardDelay = 0;
