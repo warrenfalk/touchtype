@@ -180,48 +180,47 @@ public class TypeGame {
 						char kchar = Keyboard.getEventCharacter();
 						if (kchar != 0) {
 							kchar = Character.toLowerCase(kchar);
-							if (nextChar == 0 && cchar != ' ' && (kchar == ' ' || kchar == '.')) {
-								// ignore
-							}
-							else if (kchar == cchar) {
-								if (nextChar == 0) {
-									startTime = System.currentTimeMillis();
-								}
-								if (kchar == ' ')
-									click2Effect.playAsSoundEffect(1f, 0.3f, false);
-								else
-									clickEffect.playAsSoundEffect(1f, 0.3f, false);
-								nextChar++;
-								if (nextChar == challengeText.length()) {
-									nextChar = 0;
-									long elapsed = System.currentTimeMillis() - startTime;
-									boolean success = !typo && elapsed <= msToWin;
-									if (success) {
-										successEffect.playAsSoundEffect(1f, 0.6f, false);
-										tries = 0;
-										level++;
-										saveLevel(level);
-										challengeText = getChallengeText(level);
-										msToWin = calcWinTime(challengeText);
+							if (nextChar != 0 || cchar == ' ' || (kchar != ' ' && kchar != '.')) {
+								if (kchar == cchar) {
+									if (nextChar == 0) {
+										startTime = System.currentTimeMillis();
 									}
-									else {
-										tries++;
-										bellEffect.playAsSoundEffect(1f, 1f, false);
+									if (kchar == ' ')
+										click2Effect.playAsSoundEffect(1f, 0.3f, false);
+									else
+										clickEffect.playAsSoundEffect(1f, 0.3f, false);
+									nextChar++;
+									if (nextChar == challengeText.length()) {
+										nextChar = 0;
+										long elapsed = System.currentTimeMillis() - startTime;
+										boolean success = !typo && elapsed <= msToWin;
+										if (success) {
+											successEffect.playAsSoundEffect(1f, 0.6f, false);
+											tries = 0;
+											level++;
+											saveLevel(level);
+											challengeText = getChallengeText(level);
+											msToWin = calcWinTime(challengeText);
+										}
+										else {
+											tries++;
+											bellEffect.playAsSoundEffect(1f, 1f, false);
+										}
+										startTime = 0L;
+										typo = false;
 									}
-									startTime = 0L;
-									typo = false;
+									cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+									// reset keyboard on success
+									fingerFade = 0;
+									keyboardAlpha = 0f;
+									keyboardDelay = 120;
 								}
-								cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
-								// reset keyboard on success
-								fingerFade = 0;
-								keyboardAlpha = 0f;
-								keyboardDelay = 120;
-							}
-							else {
-								buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
-								keyboardDelay = 0;
-								if (nextChar > 0)
-									typo = true;
+								else {
+									buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
+									keyboardDelay = 0;
+									if (nextChar > 0)
+										typo = true;
+								}
 							}
 						}
 					}
@@ -304,23 +303,6 @@ public class TypeGame {
 			GL11.glVertex3f(0f, 0f, 0f);
 			GL11.glEnd();
 			GL11.glPopMatrix(); // restore view matrix
-			
-			// cursor -> current character 
-			/*
-			GL11.glPushMatrix(); // save view matrix
-			String nextCharString = challengeText.substring(nextChar, nextChar + 1);
-			float nextCharScale = 2f;
-			if (" ".equals(nextCharString)) {
-				nextCharString = "[space]";
-				nextCharScale = 0.5f;
-			}
-			float nextCharWidth = font.advance(nextCharString);
-			GL11.glTranslatef(cursorPosition - (nextCharWidth * nextCharScale / 2f), -40f - 40f * nextCharScale, 0f);
-			GL11.glScalef(nextCharScale, nextCharScale, 1f);
-			GL11.glColor4f(1f, 0f, 0f, 0.8f);
-			font.render(nextCharString);
-			GL11.glPopMatrix(); // restore view matrix
-			*/
 
 			// status text
 			GL11.glPushMatrix(); // save view matrix
@@ -391,12 +373,14 @@ public class TypeGame {
 						Key homeKey = Key.byKey.get(fingerHomes[i]);
 						float dx = (homeKey.x - ckey.x);
 						float dy = (homeKey.y- ckey.y);
-						float mag = (float)Math.sqrt(dx * dx + dy * dy);
-						float ndx = dx / mag;
-						float ndy = dy / mag;
+						float length = (float)Math.sqrt(dx * dx + dy * dy);
+						float ndx = dx / length;
+						float ndy = dy / length;
 						GL11.glLineWidth(3f);
 						GL11.glBegin(GL11.GL_LINES);
+						// start 10 units from center of target key
 						GL11.glVertex3f(ndx * 10f, ndy * 10f, 0f);
+						// draw line to center of home key
 						GL11.glVertex3f(dx * keyStride, dy * keyStride, 0f);
 						GL11.glEnd();
 					}
