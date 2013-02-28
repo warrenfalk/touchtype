@@ -164,6 +164,7 @@ public class TypeGame {
 		boolean readyKeysDown = false;
 		boolean jk = false;
 		boolean fk = false;
+		long inactivity = 0;
 		
 		int tries = 0;
 		long startTime = 0L;
@@ -177,6 +178,7 @@ public class TypeGame {
 			if (state == STATE_PLAYING) {
 				while (Keyboard.next()) {
 					if (Keyboard.getEventKeyState()) {
+						inactivity = 0;
 						char kchar = Keyboard.getEventCharacter();
 						if (kchar != 0) {
 							kchar = Character.toLowerCase(kchar);
@@ -234,6 +236,12 @@ public class TypeGame {
 				if (readyKeysDown == true && jk == false && fk == false) {
 					state = STATE_PLAYING;
 					readyKeysDown = false;
+					inactivity = 0;
+					// reset level
+					typo = false;
+					startTime = 0L;
+					nextChar = 0;
+					cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 				}
 			}
 			
@@ -251,6 +259,9 @@ public class TypeGame {
 					keyboardDelay--;
 				else if (keyboardAlpha < 1f)
 					keyboardAlpha += 0.02f;
+				inactivity += 1000 / 60;
+				if (inactivity >= 15000)
+					state = STATE_WAIT_FOR_READY;
 			}
 			
 			GL11.glMatrixMode(GL11.GL_MODELVIEW);
@@ -312,7 +323,7 @@ public class TypeGame {
 			if (startTime == 0) {
 				time = "0.0 secs";
 			}
-			else if (typo) {
+			else if (typo || state != STATE_PLAYING) {
 				time = "--- secs";
 			}
 			else {
