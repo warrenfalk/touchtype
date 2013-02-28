@@ -184,19 +184,26 @@ public class TypeGame {
 							kchar = Character.toLowerCase(kchar);
 							if (nextChar != 0 || cchar == ' ' || (kchar != ' ' && kchar != '.')) {
 								if (kchar == cchar) {
-									if (nextChar == 0) {
+									// The correct key was pressed
+									// if this is the first position, start the clock
+									if (nextChar == 0)
 										startTime = System.currentTimeMillis();
-									}
+									// play a different click for space bar
 									if (kchar == ' ')
 										click2Effect.playAsSoundEffect(1f, 0.3f, false);
 									else
 										clickEffect.playAsSoundEffect(1f, 0.3f, false);
+									// advance to the next position
 									nextChar++;
 									if (nextChar == challengeText.length()) {
+										// we're at the end of the level
+										// start at the beginning
 										nextChar = 0;
+										// success is if we did it in time and without typos
 										long elapsed = System.currentTimeMillis() - startTime;
 										boolean success = !typo && elapsed <= msToWin;
 										if (success) {
+											// play success sound, reset tries, go to next level, save progress
 											successEffect.playAsSoundEffect(1f, 0.6f, false);
 											tries = 0;
 											level++;
@@ -205,12 +212,15 @@ public class TypeGame {
 											msToWin = calcWinTime(challengeText);
 										}
 										else {
+											// play "let's try again" sound and increment tries
 											tries++;
 											bellEffect.playAsSoundEffect(1f, 1f, false);
 										}
+										// reset/stop clock and typo flag
 										startTime = 0L;
 										typo = false;
 									}
+									// advance the cursor
 									cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 									// reset keyboard on success
 									fingerFade = 0;
@@ -225,6 +235,7 @@ public class TypeGame {
 									cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
 								}
 								else {
+									// wrong key, show the keyboard hint and if this wasn't the first key, set the typo flag
 									buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
 									keyboardDelay = 0;
 									if (nextChar > 0)
