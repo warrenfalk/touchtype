@@ -7,10 +7,16 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.FileSystems;
+import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,6 +36,7 @@ import org.newdawn.slick.util.ResourceLoader;
 public class TypeGame {
 	
 	static String[] challenges;
+	static ByteBuffer logBuffer = ByteBuffer.allocate(8192);
 	
 	static Key[] keys = new Key[] {
 		new Key(Keyboard.KEY_A, 'a', -4.5f, 0f, 1f, 1),
@@ -185,6 +192,7 @@ public class TypeGame {
 							if (nextChar != 0 || cchar == ' ' || (kchar != ' ' && kchar != '.')) {
 								if (kchar == cchar) {
 									// The correct key was pressed
+									logHit(level, startTime, nextChar, cchar);
 									// if this is the first position, start the clock
 									if (nextChar == 0)
 										startTime = System.currentTimeMillis();
@@ -204,6 +212,7 @@ public class TypeGame {
 										boolean success = !typo && elapsed <= msToWin;
 										if (success) {
 											// play success sound, reset tries, go to next level, save progress
+											logWin(level, elapsed);
 											successEffect.playAsSoundEffect(1f, 0.6f, false);
 											tries = 0;
 											level++;
@@ -212,6 +221,7 @@ public class TypeGame {
 											msToWin = calcWinTime(challengeText);
 										}
 										else {
+											logFail(level, elapsed, typo);
 											// play "let's try again" sound and increment tries
 											tries++;
 											bellEffect.playAsSoundEffect(1f, 1f, false);
@@ -236,6 +246,7 @@ public class TypeGame {
 								}
 								else {
 									// wrong key, show the keyboard hint and if this wasn't the first key, set the typo flag
+									logMiss(level, startTime, nextChar, kchar, cchar);
 									buzzerEffect.playAsSoundEffect(1f, 0.7f, false);
 									keyboardDelay = 0;
 									if (nextChar > 0)
@@ -252,6 +263,7 @@ public class TypeGame {
 				fk = Keyboard.isKeyDown(Keyboard.KEY_F);
 				readyKeysDown = readyKeysDown || jk && fk;
 				if (readyKeysDown == true && jk == false && fk == false) {
+					logWakeup(System.currentTimeMillis());
 					state = STATE_PLAYING;
 					readyKeysDown = false;
 					inactivity = 0;
@@ -278,8 +290,10 @@ public class TypeGame {
 				else if (keyboardAlpha < 1f)
 					keyboardAlpha += 0.02f;
 				inactivity += 1000 / 60;
-				if (inactivity >= 15000)
+				if (inactivity >= 15000) {
 					state = STATE_WAIT_FOR_READY;
+					logInactivity(level, System.currentTimeMillis());
+				}
 			}
 			
 			GL11.glMatrixMode(GL11.GL_MODELVIEW);
@@ -484,6 +498,7 @@ public class TypeGame {
 			Display.sync(60);
 
 			if (Display.isCloseRequested()) {
+				logFlush();
 				Display.destroy();
 				AL.destroy();
 				System.exit(0);
@@ -491,6 +506,75 @@ public class TypeGame {
 		}
 	}
 	
+	private static void logWakeup(long currentTime) {
+		log((byte)1);
+		log(currentTime);
+	}
+
+	private static void logInactivity(int level, long currentTime) {
+		log((byte)0);
+		log(level);
+		log(currentTime);
+	}
+
+	private static void logMiss(int level, long startTime, int nextChar,
+			char kchar, char cchar) {
+		log((byte)2);
+		log(startTime);
+		log(nextChar);
+		log(kchar);
+		log(cchar);
+	}
+
+	private static void logFail(int level, long elapsed, boolean typo) throws IOException {
+		log((byte)3);
+		log(level);
+		log(elapsed);
+		log(typo);
+		logFlush();
+	}
+
+	private static void logWin(int level, long elapsed) throws IOException {
+		log((byte)4);
+		log(level);
+		log(elapsed);
+		logFlush();
+	}
+
+	private static void logHit(int level, long startTime, int nextChar,
+			char cchar) {
+		log((byte)5);
+		log(level);
+		log(startTime);
+		log(nextChar);
+		log(cchar);
+	}
+	
+	private static void log(byte b) {
+		logBuffer.put(b);
+	}
+	
+	private static void log(int i) {
+		logBuffer.putInt(i);
+	}
+	
+	private static void log(long l) {
+		logBuffer.putLong(l);
+	}
+	
+	private static void log(boolean b) {
+		logBuffer.put(b ? (byte)1 : (byte)0);
+	}
+	
+	private static void logFlush() throws IOException {
+		File logFile = getLogFile();
+		try (FileChannel fc = FileChannel.open(FileSystems.getDefault().getPath(logFile.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+			logBuffer.flip();
+			fc.write(logBuffer);
+			logBuffer.compact();
+		}
+	}
+
 	// TODO: create display list or vbo
 	private static void drawFingerShape(float diameter) {
 		float outer = diameter / 2f;
@@ -595,6 +679,13 @@ public class TypeGame {
 		return level;
 	}
 	
+	private static File getLogFile() {
+		File userHome = new File(System.getProperty("user.home"));
+		File settings = new File(userHome, ".touchtype");
+		File log = new File(settings, "log");
+		return log;
+	}
+
 	private static long calcWinTime(String challengeText) {
 		return (long)(5000f * (float)challengeText.length() / 13f);
 	}
