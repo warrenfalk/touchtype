@@ -1,0 +1,22 @@
+<project name="touchtype" default="build">
+
+<property name="src" location="src"/>
+<property name="bin" location="bin"/>
+<property name="resources" location="resources"/>
+<property name="lwjgl-fonts" location="../lwjgl-fonts/bin"/>
+<property name="lib" location="../lib"/>
+
+<target name="build">
+	<mkdir dir="${bin}"/>
+	<javac destdir="${bin}" classpath="${lib}/lwjgl-2.8.5/jar/lwjgl.jar;${lib}/lwjgl-2.8.5/jar/lwjgl_util.jar;${lib}/slick-util.jar;${lwjgl-fonts}">
+		<src path="${src}"/>
+	</javac>
+</target>
+
+<target name="run" depends="build">
+	<java fork="true" classname="warrenfalk.typegame.TypeGame" classpath="${bin};${resources};${lib}/lwjgl-2.8.5/jar/lwjgl.jar;${lib}/lwjgl-2.8.5/jar/lwjgl_util.jar;${lib}/slick-util.jar;${lwjgl-fonts}">
+		<sysproperty key="java.library.path" value="${lib}/lwjgl-2.8.5/native"/>
+	</java>
+</target>
+
+</project>
