@@ -119,7 +119,7 @@ public class TypeGame {
 		int width = 1066;
 		int height = 600;
 
-		PixelFormat pf = new PixelFormat().withDepthBits(24).withSamples(4).withSRGB(true);
+		PixelFormat pf = new PixelFormat().withDepthBits(24).withSamples(4); //.withSamples(4).withSRGB(true);
 		Display.setDisplayMode(new DisplayMode(width, height));
 		Display.create(pf);
 		Display.setVSyncEnabled(true);
