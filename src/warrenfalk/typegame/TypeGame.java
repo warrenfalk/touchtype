@@ -114,14 +114,33 @@ public class TypeGame {
 			byChar.put(ch, this);
 		}
 	}
-
+	
+	public static void setupGl() {
+		Exception last = null;
+		for (int samples = 4; samples >= 1; samples /= 2) {
+			for (int depth = 32; depth > 8; depth -= 8) {
+				for (int i = 0; i < 2; i++) {
+					try {
+						PixelFormat pf = new PixelFormat().withDepthBits(depth).withSamples(samples).withSRGB(i == 0);
+						Display.create(pf);
+						return;
+					}
+					catch (Exception e) {
+						System.out.println(e.getMessage());
+						last = e;
+					}
+				}
+			}
+		}
+		throw new RuntimeException(last);
+	}
+	
 	public static void main(String[] args) throws Exception {
 		int width = 1066;
 		int height = 600;
 
-		PixelFormat pf = new PixelFormat().withDepthBits(24).withSamples(4); //.withSamples(4).withSRGB(true);
 		Display.setDisplayMode(new DisplayMode(width, height));
-		Display.create(pf);
+		setupGl();
 		Display.setVSyncEnabled(true);
 
 		GL11.glClearColor(1f, 1f, 1f, 0f);
