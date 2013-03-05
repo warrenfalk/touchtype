@@ -383,7 +383,7 @@ public class TypeGame {
 			if (typo)
 				GL11.glColor4f(1f, 0f, 0f, 0.8f);
 			else
-				GL11.glColor4f(0f, 1f, 0f, 0.8f);
+				GL11.glColor4f(0f, 0.8f, 0f, 0.8f);
 			GL11.glBegin(GL11.GL_QUADS);
 			GL11.glVertex3f(-1f, -13f, 0f);
 			GL11.glVertex3f(-1f, -3f, 0f);
