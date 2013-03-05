@@ -117,11 +117,12 @@ public class TypeGame {
 	
 	public static void setupGl() {
 		Exception last = null;
-		for (int samples = 4; samples >= 1; samples /= 2) {
+		for (int samples = 2; samples >= -1; samples--) {
+			int sampleSq = (samples == -1) ? 0 : 1 << samples;
 			for (int depth = 32; depth > 8; depth -= 8) {
 				for (int i = 0; i < 2; i++) {
 					try {
-						PixelFormat pf = new PixelFormat().withDepthBits(depth).withSamples(samples).withSRGB(i == 0);
+						PixelFormat pf = new PixelFormat().withDepthBits(depth).withSamples(sampleSq).withSRGB(i == 0);
 						Display.create(pf);
 						return;
 					}
