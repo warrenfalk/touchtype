@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Touchtype Typing Game
+GenericName=Typing Tutor
+Comment=The TouchType Typing Game By Warren Falk
+Exec=~/projects/typegame/touchtype/run
+Icon=~/projects/typegame/touchtype/icon.png
+Terminal=false
+Categories=Games;
+StartupNotify=true
+
