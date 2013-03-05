@@ -269,6 +269,7 @@ public class TypeGame {
 									startTime = 0L;
 									nextChar = 0;
 									cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+									tries++;
 								}
 								else {
 									// wrong key, show the keyboard hint and if this wasn't the first key, set the typo flag
