@@ -176,7 +176,9 @@ public class TypeGame {
 		
 		String readyPrompt = "Press F and J simultaneously when ready";
 
-		float cursorPosition = 0f;
+		float cursorPosition;
+		float finishPosition;
+		float startPosition;
 		float idealOffset = -(width * 0.3f);
 		float textLinePosition = idealOffset;
 		int level = readLastLevel();
@@ -198,6 +200,8 @@ public class TypeGame {
 		String challengeText = getChallengeText(level);
 		long msToWin = calcWinTime(challengeText);
 		cursorPosition = calculateCursorPosition(font, challengeText, nextChar);
+		finishPosition = calculateCursorPosition(font, challengeText, challengeText.length() - 1);
+		startPosition = calculateCursorPosition(font, challengeText, 0);
 		while (true) {
 			char cchar = Character.toLowerCase(challengeText.charAt(nextChar));
 			// process input
@@ -238,6 +242,8 @@ public class TypeGame {
 											saveLevel(level);
 											challengeText = getChallengeText(level);
 											msToWin = calcWinTime(challengeText);
+											finishPosition = calculateCursorPosition(font, challengeText, challengeText.length() - 1);
+											startPosition = calculateCursorPosition(font, challengeText, 0);
 										}
 										else {
 											logFail(level, elapsed, typo);
@@ -345,11 +351,37 @@ public class TypeGame {
 			// begin scene
 			GL11.glMatrixMode(GL11.GL_MODELVIEW);
 			
-			// cursor (arrow)
+			// status text
 			GL11.glPushMatrix(); // save view matrix
-			GL11.glTranslatef(cursorPosition, 60f, 0f);
+			status(statusFont, 0, 0, "Level :", "" + (level + 1));
+			status(statusFont, 1, 0, "To win :", secondsFormat.format((double)msToWin / 1000.0) + " secs");
+			String time;
+			float elapsedFraction = 0f;
+			long elapsed = System.currentTimeMillis() - startTime;
+			elapsedFraction = (float)elapsed / (float)msToWin;
+			if (elapsedFraction > 1f)
+				elapsedFraction = 1f;
+			if (startTime == 0) {
+				time = "0.0 secs";
+			}
+			else if (typo || state != STATE_PLAYING) {
+				time = "--- secs";
+			}
+			else {
+				time = secondsFormat.format((double)elapsed / 1000.0) + " secs";
+			}
+			status(statusFont, 2, 0, "Your time :", time);
+			status(statusFont, 3, 0, "Attempt :", "" + (tries + 1));
+			GL11.glPopMatrix(); // restore view matrix
+			
+			// pace (arrow)
+			GL11.glPushMatrix(); // save view matrix
+			GL11.glTranslatef(startPosition + elapsedFraction * (finishPosition - startPosition), 60f, 0f);
 			GL11.glScalef(5f, -5f, 1f);
-			GL11.glColor4f(1f, 0f, 0f, 0.8f);
+			if (typo)
+				GL11.glColor4f(1f, 0f, 0f, 0.8f);
+			else
+				GL11.glColor4f(0f, 1f, 0f, 0.8f);
 			GL11.glBegin(GL11.GL_QUADS);
 			GL11.glVertex3f(-1f, -13f, 0f);
 			GL11.glVertex3f(-1f, -3f, 0f);
@@ -366,25 +398,27 @@ public class TypeGame {
 			GL11.glEnd();
 			GL11.glPopMatrix(); // restore view matrix
 
-			// status text
+			// cursor (arrow)
 			GL11.glPushMatrix(); // save view matrix
-			status(statusFont, 0, 0, "Level :", "" + (level + 1));
-			status(statusFont, 1, 0, "To win :", secondsFormat.format((double)msToWin / 1000.0) + " secs");
-			String time;
-			if (startTime == 0) {
-				time = "0.0 secs";
-			}
-			else if (typo || state != STATE_PLAYING) {
-				time = "--- secs";
-			}
-			else {
-				long elapsed = System.currentTimeMillis() - startTime;
-				time = secondsFormat.format((double)elapsed / 1000.0) + " secs";
-			}
-			status(statusFont, 2, 0, "Your time :", time);
-			status(statusFont, 3, 0, "Attempt :", "" + (tries + 1));
+			GL11.glTranslatef(cursorPosition, 60f, 0f);
+			GL11.glScalef(5f, -5f, 1f);
+			GL11.glColor4f(0f, 0f, 1f, 0.8f);
+			GL11.glBegin(GL11.GL_QUADS);
+			GL11.glVertex3f(-1f, -13f, 0f);
+			GL11.glVertex3f(-1f, -3f, 0f);
+			GL11.glVertex3f(1f, -3f, 0f);
+			GL11.glVertex3f(1f, -13f, 0f);
+			GL11.glEnd();
+			GL11.glBegin(GL11.GL_TRIANGLES);
+			GL11.glVertex3f(0f, -3f, 0f);
+			GL11.glVertex3f(0f, 0f, 0f);
+			GL11.glVertex3f(3f, -4f, 0f);
+			GL11.glVertex3f(0f, -3f, 0f);
+			GL11.glVertex3f(-3f, -4f, 0f);
+			GL11.glVertex3f(0f, 0f, 0f);
+			GL11.glEnd();
 			GL11.glPopMatrix(); // restore view matrix
-			
+
 			// text
 			GL11.glPushMatrix(); // save view matrix
 			// whitish completed text
