@@ -1,5 +1,12 @@
 #!/bin/bash
 
-cd $(dirname $0)
+THISFILE=$0
+THISNAME=$(basename $0)
+if [ "${THISNAME}" != "run" ]
+then
+	THISFILE=$(readlink $THISFILE)
+fi
+cd $(dirname $THISFILE)
+pwd
 git pull
 ant run
