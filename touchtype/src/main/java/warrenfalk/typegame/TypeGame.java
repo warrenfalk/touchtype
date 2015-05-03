@@ -160,8 +160,8 @@ public class TypeGame {
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
 		GL11.glLoadIdentity();
 
-		Font f = loadFont("/fonts/Comfortaa-Regular.ttf", 60);
-		Font f2 = loadFont("/fonts/NEUROPOL.ttf", 20);
+		Font f = loadFont("fonts/Comfortaa-Regular.ttf", 60);
+		Font f2 = loadFont("fonts/NEUROPOL.ttf", 20);
 		FontRenderContext fcontext = FTFont.STANDARDCONTEXT;
 		// FTFont font = new FTGLExtrdFont(f, fcontext);
 		FTFont font = new FTGLPolygonFont(f, fcontext);
@@ -789,7 +789,7 @@ public class TypeGame {
 
 	private static Font loadFont(String fontName, float fontSize)
 			throws FontFormatException, IOException {
-		InputStream s = TypeGame.class.getResourceAsStream(fontName);
+		InputStream s = ResourceLoader.getResourceAsStream(fontName);
 		try {
 			Font awtFont = Font.createFont(Font.TRUETYPE_FONT, s);
 			return awtFont.deriveFont(fontSize);

@@ -3,3 +3,4 @@ bin/
 .settings/
 lib/
 *~
+touchtype/target/
