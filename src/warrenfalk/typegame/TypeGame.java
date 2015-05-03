@@ -623,6 +623,7 @@ public class TypeGame {
 	
 	private static void logFlush() throws IOException {
 		File logFile = getLogFile();
+		logFile.getParentFile().mkdirs();
 		try (FileChannel fc = FileChannel.open(FileSystems.getDefault().getPath(logFile.getAbsolutePath()), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
 			logBuffer.flip();
 			fc.write(logBuffer);
