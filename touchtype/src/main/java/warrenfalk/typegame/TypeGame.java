@@ -15,6 +15,7 @@ import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
@@ -135,8 +136,44 @@ public class TypeGame {
 		}
 		throw new RuntimeException(last);
 	}
+
+	public static void extractJarResource(String filename, File outputFolder)
+		throws IOException
+	{
+		outputFolder.mkdirs();
+		try (InputStream fs = ResourceLoader.getResourceAsStream(filename)) {
+			File outfile = new File(outputFolder, filename);
+			Files.copy(fs, outfile.toPath());
+		}
+	}
 	
 	public static void main(String[] args) throws Exception {
+		// attempt to unpack natives
+		File userHome = new File(System.getProperty("user.home"));
+		File settings = new File(userHome, ".touchtype");
+		File natives = new File(settings, "natives");
+		System.setProperty("org.lwjgl.librarypath", natives.getAbsolutePath());
+
+		extractJarResource("OpenAL32.dll", natives);
+		extractJarResource("OpenAL64.dll", natives);
+		extractJarResource("lwjgl.dll", natives);
+		extractJarResource("lwjgl64.dll", natives);
+		extractJarResource("liblwjgl.so", natives);
+		extractJarResource("liblwjgl64.so", natives);
+		extractJarResource("libopenal.so", natives);
+		extractJarResource("libopenal64.so", natives);
+		extractJarResource("liblwjgl.dylib", natives);
+		extractJarResource("openal.dylib", natives);
+		extractJarResource("libjinput-linux.so", natives);
+		extractJarResource("libjinput-linux64.so", natives);
+		extractJarResource("jinput-dx8.dll", natives);
+		extractJarResource("jinput-dx8_64.dll", natives);
+		extractJarResource("jinput-raw.dll", natives);
+		extractJarResource("jinput-raw_64.dll", natives);
+		extractJarResource("jinput-wintab.dll", natives);
+		extractJarResource("libjinput-osx.jnilib", natives);
+		System.out.println(natives);
+
 		int width = 1066;
 		int height = 600;
 
