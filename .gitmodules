@@ -1,0 +1,3 @@
+[submodule "lwjgl-fonts"]
+	path = lwjgl-fonts
+	url = git@github.com:warrenfalk/lwjgl-fonts.git
