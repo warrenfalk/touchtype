@@ -140,9 +140,11 @@ public class TypeGame {
 	public static void extractJarResource(String filename, File outputFolder)
 		throws IOException
 	{
+		File outfile = new File(outputFolder, filename);
+		if (outfile.exists())
+			return;
 		outputFolder.mkdirs();
 		try (InputStream fs = ResourceLoader.getResourceAsStream(filename)) {
-			File outfile = new File(outputFolder, filename);
 			Files.copy(fs, outfile.toPath());
 		}
 	}
