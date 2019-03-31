@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
 import './Touchtype.css';
-import P5Wrapper, {P5} from 'react-p5-wrapper';
 import {levels} from './levels';
 import {ranks} from './ranks';
-import {Key} from './keyboard';
+import {Key, Keyboard, keys} from './keyboard';
+import {Assets, preloadAssets} from './assets';
+import {P5Sketch} from './P5Sketch';
+import p5 from 'p5';
 
 // Redefine localStorage so that it does not return "any"
 type Storage = {
@@ -16,7 +18,7 @@ declare var localStorage: Storage;
 class Touchtype extends Component {
   render() {
     return (
-      <P5Wrapper sketch={sketch}/>
+      <P5Sketch sketch={sketch}/>
     );
   }
 }
@@ -37,17 +39,21 @@ type GameState = {
   level: number,
   levelStartTime: number,
   challengeText: string,
-  winTime?: number,
-  myRecord?: UserRecord,
-  gameRecord?: UserRecord,
+  winTime: number,
+  myRecord?: number,
+  gameRecord?: TimeRecord,
   saving: boolean,
+  progress: number,
+  nextChar: string,
+  nextKey: Key,
   
-  progress?: number,
-  nextChar?: string,
-  nextKey?: Key,
   currentLetterStartTime?: number,
+  keyQueue: number[],
+  badKey: false | number,
+  messages: Message[],
 }
 
+type Message = {message: string, expire: number}
 type ErrorResult = { error: Error }
 type SuccessResult<T> = { success: T }
 type Result<T> = ErrorResult | SuccessResult<T>
@@ -59,16 +65,37 @@ type UserProgress = {
   attempts: number,
   rank: number,
 }
-type GameRecord = {}
-type UserRecord = {}
+type TimeRecord = {
+  time: number,
+  user: string,
+}
 
 type LoadProgressArgs = {user: string}
 type LoadProgressResult = UserProgress
 type GetRecordsArgs = {}
+type RR = 'record';
 type GetRecordsResult = {
-  record: GameRecord,
-  [user: string]: UserRecord,
+  record: TimeRecord,
+  users: {
+    [user: string]: number,
+  }
 }
+
+const Settings = {
+  spacing: 2,
+}
+
+const fingerHomes = [
+  { x: 0, y: -2 }, // Thumb on Space
+  { x: -4.5, y: 0 }, // Left pinky on A
+  { x: -3.5, y: 0 }, // Left ring on S
+  { x: -2.5, y: 0 }, // Left middle on D
+  { x: -1.5, y: 0 }, // Left index on F
+  { x: 1.5, y: 0 }, // Right pinky on J
+  { x: 2.5, y: 0 }, // Right ring on K
+  { x: 3.5, y: 0 }, // Right middle on L
+  { x: 4.5, y: 0 }, // Right index on ;
+]
 
 function apiPost<TReq,TRes>(path: string, data: TReq, callback: ResultCallback<TRes>) {
   var xhr = new XMLHttpRequest();
@@ -135,7 +162,7 @@ function calcWinTime(challengeText: string, rank: number) {
 }
 
 
-export function sketch (p: P5) {
+export function sketch (p: p5) {
   let rotation = 0;
 
   const Images = {
@@ -159,9 +186,9 @@ export function sketch (p: P5) {
     width = window.innerWidth;
     height = window.innerHeight;
     let size = Math.min(width, height);
-    const cursorX = Math.ceil(width * 0.1);
-    const textHeight = Math.ceil(size * 0.1);
-    const textY = Math.ceil(height * 0.4 + textHeight * 0.5);
+    cursorX = Math.ceil(width * 0.1);
+    textHeight = Math.ceil(size * 0.1);
+    textY = Math.ceil(height * 0.4 + textHeight * 0.5);
   }
 
   function getChallengeText(level: number) {
@@ -186,7 +213,7 @@ export function sketch (p: P5) {
         }
         let response = result.success;
         gameState.gameRecord = response.record;
-        let userRecord = response[forUser];
+        let userRecord = response.users[forUser];
         console.log('record is', userRecord, response);
         if (userRecord && challenge == gameState.challengeText.toLowerCase()) {
           gameState.myRecord = userRecord;
@@ -217,7 +244,7 @@ export function sketch (p: P5) {
     gameState.currentLetterStartTime = p.millis();
   }  
 
-  function resetProgress(noAttempt: boolean) {
+  function resetProgress(noAttempt: boolean = false) {
     if (!noAttempt) {
       gameState.attempts++;
       saveProgress(user);
@@ -246,14 +273,26 @@ export function sketch (p: P5) {
       const saved = result.success;
       const level = saved.level
       const attempts = saved.attempts
+      const challengeText = getChallengeText(level);
+      const rank = saved.rank || 0;
+      const progress = 0;
+      const nextChar = challengeText[progress];
+      const nextKey = Key.byChar(nextChar.toLowerCase());
       gameState = {
         level: level || 0,
         levelStartTime: 0,
         attempts: attempts || 0,
         fail: false,
-        rank: saved.rank || 0,
-        challengeText: getChallengeText(level),
+        rank: rank,
+        challengeText: challengeText,
+        progress: progress,
+        nextChar: nextChar,
+        nextKey: nextKey,
+        winTime: calcWinTime(challengeText, rank),
         saving: false,
+        keyQueue: [],
+        badKey: false,
+        messages: [],
       }
       gotoLevel(level, attempts);
       loadingState = "loaded";
@@ -263,9 +302,15 @@ export function sketch (p: P5) {
   p.setup = function () {
     calcSizes();
     const background = p.createGraphics(width, height);
-    background.image(Images.background, 0, 0, width, height);
+    p.image(Images.background, 0, 0, width, height);
     p.createCanvas(width, height);
   };
+
+  let Assets: Assets
+
+  p.preload = function () {
+     Assets = preloadAssets(p);
+  }
 
   p.draw = function () {
     p.image(Images.background, 0, 0, width, height);
@@ -275,36 +320,38 @@ export function sketch (p: P5) {
       return;
     }
 
-    /*
     if (loadingState === "loading") {
       return;
     }
 
-    let timeNow = millis();
-    let timeOnCurrentLetter = timeNow - gameState.currentLetterStartTime;
+    let timeNow = p.millis();
+    let timeOnCurrentLetter = timeNow - (gameState.currentLetterStartTime || 0);
     let elapsedTime = timeNow - (gameState.levelStartTime || timeNow);
     let elapsedFraction = Math.min(1.0, elapsedTime / gameState.winTime);
 
+    const keyQueue = gameState.keyQueue;
     // process any keys
     if (keyQueue.length) {
       keyQueue.forEach(k => {
-        let keyPressed = Key.byKey[k];
-        badKey = false;
+        let keyPressed = Key.byKey(k);
+        gameState.badKey = false;
         if (keyPressed === gameState.nextKey) {
           // good job, play a click sound
-          if (keyPressed == Key.byKey[Keyboard.KEY_SPACE]) {
-            Sound.click2.play(null, null, 0.1);
+          if (keyPressed == Key.byKey(Keyboard.KEY_SPACE)) {
+            Assets.Sound.click2.play(undefined, undefined, 0.1);
           }
           else if (keyPressed) {
-            Sound.click.play(null, null, 0.1);
+            Assets.Sound.click.play(undefined, undefined, 0.1);
           }
           let level = gameState.level;
           advanceProgress(elapsedTime);
           if (gameState.progress === 0) {
-            if (gameState.level > level) 
-              Sound.success.play(null, null, 0.1);
-            else
-              Sound.bell.play(null, null, 0.1);
+            if (gameState.level > level) {
+              Assets.Sound.success.play(undefined, undefined, 0.1);
+            }
+            else {
+              Assets.Sound.bell.play(undefined, undefined, 0.1);
+            }
           }
         }
         else if (k === 27) {
@@ -312,16 +359,123 @@ export function sketch (p: P5) {
         }
         else if (keyPressed) {
           // whoops, buzzer
-          badKey = k;
-          Sound.buzzer.play(null, null, 0.1);
+          gameState.badKey = k;
+          Assets.Sound.buzzer.play(undefined, undefined, 0.1);
           if (gameState.progress)
             failLevel();
         }
       })
+      gameState.keyQueue = [];
     }
-    keyQueue = [];
 
+    function advanceProgress(time: number) {
+      if (gameState.progress === 0)
+        gameState.levelStartTime = p.millis();
+      let nextProgress = gameState.progress + 1;
+      if (nextProgress === gameState.challengeText.length) {
+        if (gameState.fail) {
+          resetProgress();
+        }
+        else {
+          // if this is a new record, play cheers
+          if (!gameState.gameRecord || !gameState.gameRecord.time || time < gameState.gameRecord.time) {
+            // only play it if there was an old record to beat
+            if (gameState.gameRecord && gameState.gameRecord.time) {
+              Assets.Sound.applause.play(undefined, undefined, 0.3);
+              let wpm = calcWpm(gameState.challengeText, time);
+              showMessage("New record: " + wpm + " wpm!");
+            }
+            gameState.gameRecord = {time: time, user: user}
+          }
+          if (!gameState.myRecord || time < gameState.myRecord)
+            gameState.myRecord = time;
+          saveUserRecordTime(user, time);
+          if (gameState.winTime < (p.millis() - gameState.levelStartTime))
+            resetProgress();
+          else
+            advanceLevel(time);
+        }
+        return;
+      }
+      setProgress(nextProgress);
+    }
 
+    function failLevel() {
+      if (!gameState.fail) {
+        gameState.fail = true;
+        saveProgress(user);
+      }
+    }
+    
+    function calcWpm(text: string, time: number): number {
+      let words = text.length * 0.2;
+      let minutes = time / 1000 / 60;
+      let wpm = Math.round(words * 100 / minutes) / 100;
+      return wpm;
+    }
+    
+    function showMessage(message: string) {
+      gameState.messages.unshift({message: message, expire: p.millis() + 2000})
+    }
+
+    function saveUserRecordTime(forUser: string, time: number) {
+      if (!forUser)
+        forUser = user;
+      const challenge = gameState.challengeText.toLowerCase();
+      let data = {
+        user: user,
+        challenge: challenge,
+        time: time,
+      }
+      console.log('saving time', data);
+      apiPost('./api/save-time', data, () => {console.log('time saved')});
+    }
+    
+    function advanceLevel(time: number) {
+      let nextLevel = gameState.level + 1;
+      if (nextLevel >= levels.length) {
+        gameState.rank++;
+        nextLevel = ranks[gameState.rank].startLevel;
+      }
+      gotoLevel(nextLevel, gameState.attempts + 1);
+      saveProgress(user);
+    }
+
+    // We use a special letters function instead of the built in text function
+    // this is necessary because text adjusts the spaces between different letters differently
+    // and we can't allow that because we'll draw the text using multiple calls (for multiple
+    // colors) and the spaces between letters would seem to change as we separate the text
+    // at different places
+    function letters(s: string, x: number, y: number) {
+      if (s === "")
+        return 0
+      let cx = x;
+      // for each character in the string...
+      for (let i = 0; i < s.length; i++) {
+        let c = s[i];
+        // draw the character
+        p.text(c, cx, y);
+        // calculate the character width (with spacing)
+        let cw = p.textWidth(c) + Settings.spacing;
+        // move the cursor by that much to prepare for the next character
+        cx += cw;
+      }
+    }
+    // we use a special letters width to measure the width of each letter individually
+    // to go along with our "letters" function which puts text on the screen one letter at a time
+    function lettersWidth(s: string) {
+      if (s === null || s === undefined || s === "")
+        return 0;
+      let cx = 0;
+      for (let i = 0; i < s.length; i++) {
+        let c = s[i];
+        let cw = p.textWidth(c) + Settings.spacing;
+        cx += cw;
+      }
+      return cx;
+    }
+
+    
     // split up the challenge text into the letter we expect next
     // and everything before it (finished)
     // and everything after it (remaining)
@@ -329,8 +483,12 @@ export function sketch (p: P5) {
     let remainText = gameState.challengeText.substring(gameState.progress + 1);
 
     // we'll set the text size and font now
-    textSize(textHeight);
-    textFont(Fonts.game);
+    p.textSize(textHeight);
+    p.textFont(Assets.Fonts.game);
+
+
+    // this remembers the current left-shiftedness of the challenge text in pixels
+    let textShiftLeftX = 0;
 
     // get the width of each part so we can position it
     let nextCharWidth = lettersWidth(gameState.nextChar);
@@ -356,30 +514,30 @@ export function sketch (p: P5) {
     textShiftLeftX = textShiftLeftX + (difference * 0.1);
 
     // Now we draw the text
-    noStroke();
+    p.noStroke();
     // We draw it in three parts so we can use three different colors
-    fill(50, 50, 50);
+    p.fill(50, 50, 50);
     letters(finishedText, cursorX - textShiftLeftX, textY);
 
-    fill(255, 0, 0);
+    p.fill(255, 0, 0);
     letters(gameState.nextChar, cursorX + finishedTextWidth - textShiftLeftX, textY);
 
-    fill(230, 230, 230);
+    p.fill(230, 230, 230);
     letters(remainText, cursorX + finishedTextWidth + nextCharWidth - textShiftLeftX, textY);
 
     // show current position
     let cursorY = textY - textHeight - 18;
-    noStroke();
-    fill(255, 0, 0);
-    ellipse(cursorX + finishedTextWidth - textShiftLeftX + (nextCharWidth * 0.5), cursorY, 13);
+    p.noStroke();
+    p.fill(255, 0, 0);
+    p.ellipse(cursorX + finishedTextWidth - textShiftLeftX + (nextCharWidth * 0.5), cursorY, 13);
     if (gameState.fail)
-      stroke(255, 0, 0);
+      p.stroke(255, 0, 0);
     else
-      stroke(255, 255, 255);
-    strokeWeight(2);
-    noFill();
+      p.stroke(255, 255, 255);
+    p.strokeWeight(2);
+    p.noFill();
     let progressPosition = finishedTextWidth + nextCharWidth * 0.5;
-    ellipse(cursorX + progressPosition - textShiftLeftX, cursorY, 18);
+    p.ellipse(cursorX + progressPosition - textShiftLeftX, cursorY, 18);
 
     // show best pace position
     let paceY = textY + 10 + 18;
@@ -388,31 +546,87 @@ export function sketch (p: P5) {
     if (gameBest) {
       let bestFraction = Math.min(1.0, elapsedTime / gameBest);
       let bestPosition = beginX + bestFraction * (endX - beginX);
-      stroke(0, 90, 255);
-      noFill();
-      ellipse(cursorX + bestPosition - textShiftLeftX, paceY, 15);
-    }
+      p.stroke(0, 90, 255);
+      p.noFill();
+      p.ellipse(cursorX + bestPosition - textShiftLeftX, paceY, 15);
 
-    let myBest = gameState.myRecord;
-    if (myBest && myBest < gameBest) {
-      let bestFraction = Math.min(1.0, elapsedTime / myBest);
-      let bestPosition = beginX + bestFraction * (endX - beginX);
-      stroke(120, 120, 120);
-      noFill();
-      ellipse(cursorX + bestPosition - textShiftLeftX, paceY, 15);
+      let myBest = gameState.myRecord;
+      if (myBest && myBest < gameBest) {
+        let bestFraction = Math.min(1.0, elapsedTime / myBest);
+        let bestPosition = beginX + bestFraction * (endX - beginX);
+        p.stroke(120, 120, 120);
+        p.noFill();
+        p.ellipse(cursorX + bestPosition - textShiftLeftX, paceY, 15);
+      }  
     }
-
 
     // show pace position
     if (!gameState.fail) {
       let pacePosition = beginX + elapsedFraction * (endX - beginX);
-      stroke(255, 255, 0);
-      noFill();
-      ellipse(cursorX + pacePosition - textShiftLeftX, paceY, 15);
+      p.stroke(255, 255, 0);
+      p.noFill();
+      p.ellipse(cursorX + pacePosition - textShiftLeftX, paceY, 15);
     }
 
-    if (badKey) {
-      drawKeyboard(1, gameState.nextKey, badKey);
+    // This function is responsible for drawing the keyboard on the screen
+    // when helping the user out
+    function drawKeyboard(alpha: number, hintKey: Key) {
+      let windowSize = Math.min(width, height);
+
+      let kbcenter = { x: width / 2, y: height * 0.8 };
+      let keyWidth = Math.floor(windowSize * 0.04);
+      let keyHeight = Math.floor(windowSize * 0.04);
+      let keyHorizPeriod = Math.ceil(windowSize * 0.045);
+      let keyVertPeriod = -Math.ceil(windowSize * 0.045);
+
+      p.noStroke();
+
+      // draw every key
+      keys.forEach(key => {
+        let keyAlpha = p.keyIsDown(key.key) ? 1.0 : 0.2;
+        p.strokeWeight(1)
+        p.stroke(255, 255, 255, 100)
+        p.fill(0, 77, 230, keyAlpha * alpha * 255);
+        let x = kbcenter.x + key.x * keyHorizPeriod;
+        let y = kbcenter.y + key.y * keyVertPeriod;
+        let w = keyWidth * key.w;
+
+        p.rect(x - w * 0.5, y - keyHeight * 0.5, w, keyHeight, 3);
+      })
+
+      // draw a circle for each finger
+      for (let i = 0; i < 9; i++) {
+        // calculate the home position for this finger
+        let h = fingerHomes[i];
+        let hx = kbcenter.x + h.x * keyHorizPeriod;
+        let hy = kbcenter.y + h.y * keyVertPeriod;
+        if (hintKey.finger !== i) {
+          // if this isn't the finger we're currently giving a hint for
+          // then draw it on its home key in black
+          p.fill(0, 0, 0, alpha * 255);
+          p.ellipse(hx, hy, keyWidth - 5);
+        }
+        else {
+          // this is the finger we're giving the hint for
+          // find the location of the key it needs to go on
+          let fx = kbcenter.x + hintKey.x * keyHorizPeriod;
+          let fy = kbcenter.y + hintKey.y * keyVertPeriod;
+          if (hx !== fx || hy !== fy) {
+            // if it isn't in its home position, then draw a line from the home position
+            // to where it needs to be
+            p.strokeWeight(3);
+            p.stroke(255, 0, 0, alpha * 255);
+            p.line(hx, hy, fx, fy);
+            p.strokeWeight(0);
+          }
+          p.fill(255, 0, 0, alpha * 255);
+          p.ellipse(fx, fy, keyWidth - 5);
+        }
+      }
+    }
+
+    if (gameState.badKey) {
+      drawKeyboard(1, gameState.nextKey);
     }
     else if (timeOnCurrentLetter > 2000) {
       // the user has been on this letter for a while,
@@ -423,52 +637,51 @@ export function sketch (p: P5) {
       drawKeyboard(kbAlpha, gameState.nextKey);
     }
 
-    noStroke();
-    textSize(18);
-    textFont(Fonts.status);
-    fill(100, 100, 100);
-    text("Level", 120, 33);
-    text("Attempts", 240, 33);
-    text("Rank", 390, 33);
+    p.noStroke();
+    p.textSize(18);
+    p.textFont(Assets.Fonts.status);
+    p.fill(100, 100, 100);
+    p.text("Level", 120, 33);
+    p.text("Attempts", 240, 33);
+    p.text("Rank", 390, 33);
     if (gameState.gameRecord && gameState.gameRecord.time)
-      text("Record", 600, 33);
+      p.text("Record", 600, 33);
     
-    stroke(0, 128, 0);
-    strokeWeight(1);
-    fill(0, 255, 0);
-    textSize(24);
-    text(gameState.level, 180, 35);
-    text(gameState.attempts, 330, 35);
-    text(ranks[gameState.rank].name, 450, 35);
+    p.stroke(0, 128, 0);
+    p.strokeWeight(1);
+    p.fill(0, 255, 0);
+    p.textSize(24);
+    p.text(gameState.level, 180, 35);
+    p.text(gameState.attempts, 330, 35);
+    p.text(ranks[gameState.rank].name, 450, 35);
     if (gameState.gameRecord && gameState.gameRecord.time) {
-      noStroke();
-      fill(20, 120, 255)
+      p.noStroke();
+      p.fill(20, 120, 255)
       let wpm = calcWpm(gameState.challengeText, gameState.gameRecord.time)
-      text(wpm + " wpm by " + gameState.gameRecord.user, 680, 35);
+      p.text(wpm + " wpm by " + gameState.gameRecord.user, 680, 35);
     }
 
-    if (messages.length) {
+    if (gameState.messages.length) {
       let messageY = height * 0.15;
       let messageHeight = height * 0.0275;
-      textSize(messageHeight);
-      textFont(Fonts.status);
-      for (let i = 0; i < messages.length; i++) {
-        let message = messages[i].message;
-        let timeLeft = messages[i].expire - timeNow;
+      p.textSize(messageHeight);
+      p.textFont(Assets.Fonts.status);
+      for (let i = 0; i < gameState.messages.length; i++) {
+        let message = gameState.messages[i].message;
+        let timeLeft = gameState.messages[i].expire - timeNow;
         if (timeLeft < 0)
           continue;
-        let messageWidth = textWidth(message);
+        let messageWidth = p.textWidth(message);
         let messageX = width * 0.5 - messageWidth * 0.5;
         let alpha = Math.min(timeLeft, 400) * (1/400);
-        noStroke();
-        fill(255, 255, 255, alpha * 255);
-        text(message, messageX, messageY);
+        p.noStroke();
+        p.fill(255, 255, 255, alpha * 255);
+        p.text(message, messageX, messageY);
         messageY += messageHeight;
       }
-      while (messages.length && messages[messages.length - 1].expire < timeNow)
-        messages.pop();
+      while (gameState.messages.length && gameState.messages[gameState.messages.length - 1].expire < timeNow)
+        gameState.messages.pop();
     }
-
 
     //text(finishedText, idealX - finishedTextWidth, 300);
     //text(remainText, idealX + nextCharWidth, 300);
@@ -476,260 +689,18 @@ export function sketch (p: P5) {
     //show("elapsedFraction", elapsedFraction);
     //show("elapsedTime", elapsedTime);
     //show("winTime", gameState.winTime)
-    showAll();
-    */
+    //showAll();
+    
   };
+
+  p.keyPressed = function() {
+    const keyCode = p.keyCode;
+    gameState.keyQueue.push(keyCode);
+  }  
 };
 
+
 /*
-
-let Sound;
-let Fonts;
-let Images;
-
-function preload() {
-  Sound = {
-    bell:  loadSound('assets/bell.mp3'),
-    buzzer: loadSound('assets/buzzer.mp3'),
-    click: loadSound('assets/click.mp3'),
-    click2: loadSound('assets/click2.mp3'),
-    success: loadSound('assets/success.mp3'),
-    applause: loadSound('assets/applause.mp3'),
-  }
-  Fonts = {
-    game: loadFont("assets/comfortaa-regular.otf"),
-    status: loadFont("assets/roboto-regular.ttf"),
-  }
-  Images = {
-    background: loadImage("assets/dark_spotlight.jpg"),
-  }
-}
-
-function setup() {
-  calcSizes();
-  createCanvas(width, height);
-}
-
-window.onresize = function(e) {
-  calcSizes();
-  resizeCanvas(width, height);
-}
-
-let width;
-let height;
-// this is how far from the left margin we line up the current letter on
-let cursorX;
-let textY;
-let textHeight;
-let background;
-
-function calcSizes() {
-  width = window.innerWidth;
-  height = window.innerHeight;
-  let size = Math.min(width, height);
-  cursorX = Math.ceil(width * 0.1);
-  textHeight = Math.ceil(size * 0.1);
-  textY = Math.ceil(height * 0.4 + textHeight * 0.5);
-  background = createGraphics(width, height);
-  background.image(Images.background, 0, 0, width, height);
-}
-
-let challenges;
-
-let keyQueue = [];
-// this remembers the current left-shiftedness of the challenge text in pixels
-let textShiftLeftX = 0;
-
-let messages = [];
-function showMessage(message) {
-  messages.unshift({message: message, expire: millis() + 2000})
-}
-
-function advanceProgress(time) {
-  if (gameState.progress === 0)
-    gameState.levelStartTime = millis();
-  let nextProgress = gameState.progress + 1;
-  if (nextProgress === gameState.challengeText.length) {
-    if (gameState.fail) {
-      resetProgress();
-    }
-    else {
-      // if this is a new record, play cheers
-      if (time && (!gameState.gameRecord || !gameState.gameRecord.time || time < gameState.gameRecord.time)) {
-        // only play it if there was an old record to beat
-        if (gameState.gameRecord && gameState.gameRecord.time) {
-          Sound.applause.play(null, null, 0.3);
-          let wpm = calcWpm(gameState.challengeText, time);
-          showMessage("New record: " + wpm + " wpm!");
-        }
-        gameState.gameRecord = {time: time, user: user}
-      }
-      if (!gameState.myRecord || time < gameState.myRecord)
-        gameState.myRecord = time;
-      saveUserRecordTime(user, time);
-      if (gameState.winTime < (millis() - gameState.levelStartTime))
-        resetProgress();
-      else
-        advanceLevel(time);
-    }
-    return;
-  }
-  setProgress(nextProgress);
-}
-
-function saveUserRecordTime(forUser, time) {
-  if (!forUser)
-    forUser = user;
-  const challenge = gameState.challengeText.toLowerCase();
-  let data = {
-    user: user,
-    challenge: challenge,
-    time: time,
-  }
-  console.log('saving time', data);
-  apiPost('./api/save-time', data, () => {console.log('time saved')});
-}
-
-function advanceLevel(time) {
-  let nextLevel = gameState.level + 1;
-  if (nextLevel >= levels.length) {
-    gameState.rank++;
-    nextLevel = ranks[gameState.rank].startLevel;
-  }
-  gotoLevel(nextLevel);
-  saveProgress();
-}
-
-function failLevel() {
-  if (!gameState.fail) {
-    gameState.fail = true;
-    saveProgress();
-  }
-}
-
-let badKey = false;
-function draw() {
-
-}
-
-function calcWpm(text, time) {
-  let words = text.length * 0.2;
-  let minutes = time / 1000 / 60;
-  let wpm = Math.round(words * 100 / minutes) / 100;
-  return wpm;
-}
-
-let fingerHomes = [
-  { x: 0, y: -2 }, // Thumb on Space
-  { x: -4.5, y: 0 }, // Left pinky on A
-  { x: -3.5, y: 0 }, // Left ring on S
-  { x: -2.5, y: 0 }, // Left middle on D
-  { x: -1.5, y: 0 }, // Left index on F
-  { x: 1.5, y: 0 }, // Right pinky on J
-  { x: 2.5, y: 0 }, // Right ring on K
-  { x: 3.5, y: 0 }, // Right middle on L
-  { x: 4.5, y: 0 }, // Right index on ;
-]
-
-// This function is responsible for drawing the keyboard on the screen
-// when helping the user out
-function drawKeyboard(alpha, hintKey) {
-  let windowSize = Math.min(width, height);
-
-  let kbcenter = { x: width / 2, y: height * 0.8 };
-  let keyWidth = Math.floor(windowSize * 0.04);
-  let keyHeight = Math.floor(windowSize * 0.04);
-  let keyHorizPeriod = Math.ceil(windowSize * 0.045);
-  let keyVertPeriod = -Math.ceil(windowSize * 0.045);
-
-  noStroke();
-
-  // draw every key
-  keys.forEach(key => {
-    let keyAlpha = keyIsDown(key.key) ? 1.0 : 0.2;
-    strokeWeight(1)
-    stroke(255, 255, 255, 100)
-    fill(0, 77, 230, keyAlpha * alpha * 255);
-    let x = kbcenter.x + key.x * keyHorizPeriod;
-    let y = kbcenter.y + key.y * keyVertPeriod;
-    let w = keyWidth * key.w;
-
-    rect(x - w * 0.5, y - keyHeight * 0.5, w, keyHeight, 3);
-  })
-
-  // draw a circle for each finger
-  for (let i = 0; i < 9; i++) {
-    // calculate the home position for this finger
-    let h = fingerHomes[i];
-    let hx = kbcenter.x + h.x * keyHorizPeriod;
-    let hy = kbcenter.y + h.y * keyVertPeriod;
-    if (hintKey.finger !== i) {
-      // if this isn't the finger we're currently giving a hint for
-      // then draw it on its home key in black
-      fill(0, 0, 0, alpha * 255);
-      ellipse(hx, hy, keyWidth - 5);
-    }
-    else {
-      // this is the finger we're giving the hint for
-      // find the location of the key it needs to go on
-      let fx = kbcenter.x + hintKey.x * keyHorizPeriod;
-      let fy = kbcenter.y + hintKey.y * keyVertPeriod;
-      if (hx !== fx || hy !== fy) {
-        // if it isn't in its home position, then draw a line from the home position
-        // to where it needs to be
-        strokeWeight(3);
-        stroke(255, 0, 0, alpha * 255);
-        line(hx, hy, fx, fy);
-        strokeWeight(0);
-      }
-      fill(255, 0, 0, alpha * 255);
-      ellipse(fx, fy, keyWidth - 5);
-    }
-  }
-}
-
-// We use a special letters function instead of the built in text function
-// this is necessary because text adjusts the spaces between different letters differently
-// and we can't allow that because we'll draw the text using multiple calls (for multiple
-// colors) and the spaces between letters would seem to change as we separate the text
-// at different places
-const spacing = 2;
-function letters(s, x, y) {
-  if (s === null || s === undefined || s === "")
-    return 0
-  let cx = x;
-  // for each character in the string...
-  for (let i = 0; i < s.length; i++) {
-    let c = s[i];
-    // draw the character
-    text(c, cx, y);
-    // calculate the character width (with spacing)
-    let cw = textWidth(c) + spacing;
-    // move the cursor by that much to prepare for the next character
-    cx += cw;
-  }
-}
-
-// we use a special letters width to measure the width of each letter individually
-// to go along with our "letters" function which puts text on the screen one letter at a time
-function lettersWidth(s) {
-  if (s === null || s === undefined || s === "")
-    return 0;
-  let cx = 0;
-  for (let i = 0; i < s.length; i++) {
-    let c = s[i];
-    let cw = textWidth(c) + spacing;
-    cx += cw;
-  }
-  return cx;
-}
-
-function keyPressed() {
-  keyQueue.push(keyCode);
-}
-
-
-
 
 // ---------------------------------------------------
 // Show functions

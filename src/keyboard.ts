@@ -43,8 +43,8 @@ export const Keyboard = {
   KEY_SPACE : 32,
 }
 
-const byKey: Key[] = [];
-const byChar: {[ch: string]: Key} = {};
+const _byKey: Key[] = [];
+const _byChar: {[ch: string]: Key} = {};
 
 export class Key {
     key: number;
@@ -60,11 +60,11 @@ export class Key {
         this.y = y;
         this.w = w;
         this.finger = finger;
-        byKey[key] = this;
-        byChar[key] = this;
+        _byKey[key] = this;
+        _byChar[ch] = this;
     }
-    static byKey(key: number) { return byKey[key]; }
-    static byChar(ch: string) { return byChar[ch]; }
+    static byKey(key: number) { return _byKey[key]; }
+    static byChar(ch: string) { return _byChar[ch]; }
 }
 
 export const keys = [
