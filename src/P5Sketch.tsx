@@ -10,12 +10,18 @@ export class P5Sketch extends React.Component<Props> {
     wrapper?: HTMLDivElement;
     canvas?: p5;
     render = () => {
-        return <div ref={wrapper => this.wrapper = wrapper || undefined} />
+        return (
+            <div
+                style={{position: 'fixed', left: 0, top: 0, width: "100%", height: "100%"}}
+                ref={wrapper => this.wrapper = wrapper || undefined}
+                dangerouslySetInnerHTML={{__html: ""}}
+            />
+        )
     }
     componentDidMount = () => {
-        this.canvas = new p5(this.props.sketch, this.wrapper);
-        if (this.canvas)
-            this.props.sketch(this.canvas);
+        if (!this.canvas) {
+            this.canvas = new p5(this.props.sketch, this.wrapper);
+        }
         /*
         if (this.canvas.myCustomRedrawAccordingToNewPropsHandler) {
             this.canvas.myCustomRedrawAccordingToNewPropsHandler(this.props);
@@ -23,6 +29,9 @@ export class P5Sketch extends React.Component<Props> {
         */
     }
     componentWillReceiveProps = (nextProps: Props) => {
+        if (!this.canvas && nextProps.sketch !== this.props.sketch) {
+            this.canvas = new p5(this.props.sketch, this.wrapper);
+        }
         /*
         if (this.props.sketch !== newprops.sketch) {
             this.wrapper.removeChild(this.wrapper.childNodes[0]);

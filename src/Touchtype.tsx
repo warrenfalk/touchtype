@@ -182,9 +182,9 @@ export function sketch (p: p5) {
   type UserRecord = {
   }
 
-  function calcSizes() {
-    width = window.innerWidth;
-    height = window.innerHeight;
+  function calcSizes(canvasWidth: number, canvasHeight: number) {
+    width = canvasWidth;
+    height = canvasHeight;
     let size = Math.min(width, height);
     cursorX = Math.ceil(width * 0.1);
     textHeight = Math.ceil(size * 0.1);
@@ -299,11 +299,15 @@ export function sketch (p: p5) {
     });
   }
 
+  p.windowResized = function() {
+    calcSizes(p.windowWidth, p.windowHeight);
+    p.resizeCanvas(p.windowWidth, p.windowHeight);
+  }
+
   p.setup = function () {
-    calcSizes();
-    const background = p.createGraphics(width, height);
-    p.image(Images.background, 0, 0, width, height);
+    calcSizes(p.windowWidth, p.windowHeight);
     p.createCanvas(width, height);
+    p.image(Images.background, 0, 0, width, height);
   };
 
   let Assets: Assets
