@@ -8,9 +8,21 @@ import {Assets, preloadAssets} from './assets';
 import {P5Sketch} from './P5Sketch';
 import p5 from 'p5';
 
+type Json<T> = string
+
+function parseJson<T>(s: string | undefined): T | undefined {
+  if (s === undefined) return s;
+  try { return JSON.parse(s) as T }
+  catch { return undefined }
+}
+
+function unparseJson<T>(t: T): string {
+  return JSON.stringify(t);
+}
+
 // Redefine localStorage so that it does not return "any"
 type Storage = {
-  progress?: UserProgress;
+  progress?: Json<UserProgress>;
   touchtypeUser?: string
 }
 declare var localStorage: Storage;
@@ -131,7 +143,7 @@ Note to self:  The plan here is as follows
 
 function loadProgress(forUser: string, callback: ResultCallback<UserProgress>) {
   if (forUser === "guest") {
-    const progress: UserProgress = localStorage.progress || virginProgress();
+    const progress: UserProgress = parseJson(localStorage.progress) || virginProgress();
     callback({success: progress});
     return
   }
@@ -195,14 +207,15 @@ export function sketch (p: p5) {
     return levels[level]
   }
 
-  function getUserRecordTime(forUser: string) {
-    if (forUser === "guest") {
-      return
-    }
-    let challenge = gameState.challengeText.toLowerCase();
+  function getRecords(forUser: string, forChallenge: string) {
+    let challenge = forChallenge.toLowerCase();
     delete gameState.myRecord;
     delete gameState.gameRecord;
     console.log('getting record for', forUser);
+    if (forUser === "guest") {
+      // TODO: load a local record from storage
+      return
+    }
     apiPost<GetRecordsArgs, GetRecordsResult>(
       './api/get-records',
       {user: forUser, challenge: challenge},
@@ -223,13 +236,17 @@ export function sketch (p: p5) {
   }
 
   function saveProgress(forUser: string) {
-    let saveData = {
-      user: forUser,
+    console.log("saving...");
+    const progress: UserProgress = {
       level: gameState.level,
       attempts: gameState.attempts,
       rank: gameState.rank || 0,
+    }
+    localStorage.progress = unparseJson(progress);
+    let saveData = {
+      user: forUser,
+      ...progress,
     };
-    console.log("saving...");
     gameState.saving = true;
     apiPost("./api/save-progress", saveData, () => {
       console.log("done");
@@ -259,7 +276,7 @@ export function sketch (p: p5) {
     gameState.level = level;
     gameState.challengeText = getChallengeText(level);
     gameState.winTime = calcWinTime(gameState.challengeText, gameState.rank);
-    getUserRecordTime(user);
+    getRecords(user, gameState.challengeText);
     resetProgress(true);
   }  
 
@@ -316,6 +333,8 @@ export function sketch (p: p5) {
      Assets = preloadAssets(p);
   }
 
+  // this remembers the current left-shiftedness of the challenge text in pixels
+  let textShiftLeftX = 0;
   p.draw = function () {
     p.image(Images.background, 0, 0, width, height);
 
@@ -490,9 +509,6 @@ export function sketch (p: p5) {
     p.textSize(textHeight);
     p.textFont(Assets.Fonts.game);
 
-
-    // this remembers the current left-shiftedness of the challenge text in pixels
-    let textShiftLeftX = 0;
 
     // get the width of each part so we can position it
     let nextCharWidth = lettersWidth(gameState.nextChar);
