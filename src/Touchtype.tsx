@@ -8,24 +8,35 @@ import {Assets, preloadAssets} from './assets';
 import {P5Sketch} from './P5Sketch';
 import p5 from 'p5';
 
-type Json<T> = string
+// prevent accidental use of localStorage
+declare var localStorage: {};
 
-function parseJson<T>(s: string | undefined): T | undefined {
-  if (s === undefined) return s;
-  try { return JSON.parse(s) as T }
-  catch { return undefined }
+function storageField<T>(name: string, getDefault: (() => T)) {
+  return {
+    get: () => {
+      let json = (localStorage as any)[name];
+      if (json === undefined)
+        return getDefault()
+      try { return JSON.parse(json) as T }
+      catch { return getDefault() }
+    },
+    put: (value: T) => {
+      let json = JSON.stringify(value);
+      (localStorage as any)[name] = json;
+    }
+  }
 }
 
-function unparseJson<T>(t: T): string {
-  return JSON.stringify(t);
+const Storage = {
+  progress: storageField<UserProgress>("progress", () => ({
+    level: 0,
+    attempts: 0,
+    rank: 0,
+  })),
+  recordTimes: storageField<GameRecords>("recordTimes", () => ({
+  })),
+  user: storageField<string>("user", () => "guest"),
 }
-
-// Redefine localStorage so that it does not return "any"
-type Storage = {
-  progress?: Json<UserProgress>;
-  touchtypeUser?: string
-}
-declare var localStorage: Storage;
 
 class Touchtype extends Component {
   render() {
@@ -37,7 +48,7 @@ class Touchtype extends Component {
 
 export default Touchtype;
 
-let user: string = localStorage.touchtypeUser || "guest";
+let user = Storage.user.get();
 /*
 if (!user) {
   window.location.href = "./user.html";
@@ -63,6 +74,13 @@ type GameState = {
   keyQueue: number[],
   badKey: false | number,
   messages: Message[],
+}
+
+type GameRecords = {
+  [user: string]: UserRecords | undefined,
+}
+type UserRecords = {
+  [challenge: string]: number | undefined,
 }
 
 type Message = {message: string, expire: number}
@@ -124,13 +142,6 @@ function apiPost<TReq,TRes>(path: string, data: TReq, callback: ResultCallback<T
   };
 }
 
-function virginProgress() : UserProgress {
-  return {
-    level: 0,
-    attempts: 0,
-    rank: 0,
-  }
-}
 
 /*
 Note to self:  The plan here is as follows
@@ -143,7 +154,7 @@ Note to self:  The plan here is as follows
 
 function loadProgress(forUser: string, callback: ResultCallback<UserProgress>) {
   if (forUser === "guest") {
-    const progress: UserProgress = parseJson(localStorage.progress) || virginProgress();
+    const progress = Storage.progress.get();
     callback({success: progress});
     return
   }
@@ -191,9 +202,6 @@ export function sketch (p: p5) {
 
   let gameState: GameState;
 
-  type UserRecord = {
-  }
-
   function calcSizes(canvasWidth: number, canvasHeight: number) {
     width = canvasWidth;
     height = canvasHeight;
@@ -213,6 +221,12 @@ export function sketch (p: p5) {
     delete gameState.gameRecord;
     console.log('getting record for', forUser);
     if (forUser === "guest") {
+      let userRecords = Storage.recordTimes.get()[forUser] || {}
+      let userRecord = userRecords[forChallenge]
+      if (userRecord) {
+        gameState.myRecord = userRecord;
+        gameState.gameRecord = {user: "guest", time: userRecord};
+      }
       // TODO: load a local record from storage
       return
     }
@@ -242,7 +256,7 @@ export function sketch (p: p5) {
       attempts: gameState.attempts,
       rank: gameState.rank || 0,
     }
-    localStorage.progress = unparseJson(progress);
+    Storage.progress.put(progress);
     let saveData = {
       user: forUser,
       ...progress,
@@ -412,7 +426,7 @@ export function sketch (p: p5) {
           }
           if (!gameState.myRecord || time < gameState.myRecord)
             gameState.myRecord = time;
-          saveUserRecordTime(user, time);
+          saveUserRecordTime(user, time, gameState.challengeText);
           if (gameState.winTime < (p.millis() - gameState.levelStartTime))
             resetProgress();
           else
@@ -441,14 +455,27 @@ export function sketch (p: p5) {
       gameState.messages.unshift({message: message, expire: p.millis() + 2000})
     }
 
-    function saveUserRecordTime(forUser: string, time: number) {
-      if (!forUser)
-        forUser = user;
-      const challenge = gameState.challengeText.toLowerCase();
+    function saveUserRecordTime(forUser: string, time: number, forChallenge: string) {
+      const challenge = forChallenge.toLowerCase();
       let data = {
-        user: user,
+        user: forUser,
         challenge: challenge,
         time: time,
+      }
+      if (forUser === "guest") {
+        const prevRecords = Storage.recordTimes.get();
+        const prevUserRecords = prevRecords[forUser] || {};
+        const prevUserRecord = prevUserRecords[challenge];
+        if (!prevUserRecord || time < prevUserRecord) {
+          const nextRecords = {
+            ...prevRecords,
+            [forUser]: {
+              ...prevUserRecords,
+              [challenge]: time
+            }
+          }
+          Storage.recordTimes.put(nextRecords);
+        }
       }
       console.log('saving time', data);
       apiPost('./api/save-time', data, () => {console.log('time saved')});
