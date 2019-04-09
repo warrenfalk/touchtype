@@ -115,3 +115,15 @@ export const keys = [
   
   new Key(Keyboard.KEY_SPACE, ' ', 0, -2, 5, 0),
 ];
+
+export const fingerHomes = [
+  { x: 0, y: -2 }, // Thumb on Space
+  { x: -4.5, y: 0 }, // Left pinky on A
+  { x: -3.5, y: 0 }, // Left ring on S
+  { x: -2.5, y: 0 }, // Left middle on D
+  { x: -1.5, y: 0 }, // Left index on F
+  { x: 1.5, y: 0 }, // Right pinky on J
+  { x: 2.5, y: 0 }, // Right ring on K
+  { x: 3.5, y: 0 }, // Right middle on L
+  { x: 4.5, y: 0 }, // Right index on ;
+];
