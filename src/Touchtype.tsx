@@ -30,14 +30,19 @@ if (!user) {
 */
 
 type GameLevelState = {
-  attempts: number,
-  fail: boolean,
-  level: number,
-  levelStartTime: number,
+  // static level data
+  levelNumber: number,
   challengeText: string,
   winTime: number,
+
+  // level records
   myRecord?: number,
   gameRecord?: TimeRecord,
+
+  // status of current attempt
+  attempts: number,
+  fail: boolean,
+  startTime: number,
   progress: number,
   nextChar: string,
   nextKey: Key,
@@ -183,7 +188,7 @@ export function sketch (p: p5) {
   function saveProgress(forUser: string) {
     console.log("saving...");
     const progress: UserProgress = {
-      level: gameState.level.level,
+      level: gameState.level.levelNumber,
       attempts: gameState.level.attempts,
       rank: gameState.rank || 0,
     }
@@ -212,13 +217,13 @@ export function sketch (p: p5) {
       saveProgress(user);
     }
     gameState.level.fail = false;
-    gameState.level.levelStartTime = 0;
+    gameState.level.startTime = 0;
     setProgress(0);
   }  
 
   function gotoLevel(level: number, attempts: number) {
     gameState.level.attempts = attempts || 0
-    gameState.level.level = level;
+    gameState.level.levelNumber = level;
     gameState.level.challengeText = getChallengeText(levels, level);
     gameState.level.winTime = calcWinTime(gameState.level.challengeText, gameState.rank);
     getRecords(user, gameState.level.challengeText);
@@ -242,8 +247,8 @@ export function sketch (p: p5) {
       const nextKey = Key.byChar(nextChar.toLowerCase());
       gameState = {
         level: {
-          level: level || 0,
-          levelStartTime: 0,
+          levelNumber: level || 0,
+          startTime: 0,
           attempts: attempts || 0,
           fail: false,
           challengeText: challengeText,
@@ -296,7 +301,7 @@ export function sketch (p: p5) {
 
     const timeNow = p.millis();
     const timeOnCurrentLetter = timeNow - (gameState.level.currentLetterStartTime || 0);
-    const elapsedTime = timeNow - (gameState.level.levelStartTime || timeNow);
+    const elapsedTime = timeNow - (gameState.level.startTime || timeNow);
     const elapsedFraction = Math.min(1.0, elapsedTime / gameState.level.winTime);
 
     const keyQueue = gameState.keyQueue;
@@ -340,7 +345,7 @@ export function sketch (p: p5) {
 
     function advanceProgress(time: number) {
       if (gameState.level.progress === 0)
-        gameState.level.levelStartTime = p.millis();
+        gameState.level.startTime = p.millis();
       const nextProgress = gameState.level.progress + 1;
       if (nextProgress === gameState.level.challengeText.length) {
         if (gameState.level.fail) {
@@ -360,7 +365,7 @@ export function sketch (p: p5) {
           if (!gameState.level.myRecord || time < gameState.level.myRecord)
             gameState.level.myRecord = time;
           saveUserRecordTime(user, time, gameState.level.challengeText);
-          if (gameState.level.winTime < (p.millis() - gameState.level.levelStartTime))
+          if (gameState.level.winTime < (p.millis() - gameState.level.startTime))
             resetProgress();
           else
             advanceLevel(time);
@@ -415,7 +420,7 @@ export function sketch (p: p5) {
     }
     
     function advanceLevel(time: number) {
-      let nextLevel = gameState.level.level + 1;
+      let nextLevel = gameState.level.levelNumber + 1;
       if (nextLevel >= levels.length) {
         gameState.rank++;
         nextLevel = ranks[gameState.rank].startLevel;
