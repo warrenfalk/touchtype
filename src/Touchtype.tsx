@@ -49,7 +49,6 @@ type GameLevelAttemptState = {
 
 type GameLevelAttemptProgress = {
   readonly charsCompleted: number,
-  readonly nextKey: Key,
   readonly currentLetterStartTime?: number,
 }
 
@@ -221,13 +220,9 @@ export function sketch (p: p5) {
     })
   }
 
-  function progress(challenge: string, charsCompleted: number) {
-    const nextChar = getNextChar(challenge, charsCompleted);
-    const nextKey = getNextKey(nextChar);
+  function progress(challenge: string, charsCompleted: number): GameLevelAttemptProgress {
     return {
       charsCompleted,
-      nextChar,
-      nextKey,
       currentLetterStartTime: p.millis(),
     }
   }
@@ -272,7 +267,6 @@ export function sketch (p: p5) {
       const rank = saved.rank || 0;
       const progress = 0;
       const nextChar = challengeText[progress];
-      const nextKey = Key.byChar(nextChar.toLowerCase());
       gameState = {
         levelState: {
           level: {
@@ -287,7 +281,6 @@ export function sketch (p: p5) {
             failed: false,
             progress: {
               charsCompleted: progress,
-              nextKey: nextKey,
             }
           },
         },
@@ -337,45 +330,6 @@ export function sketch (p: p5) {
     const timeOnCurrentLetter = timeNow - (gameState.levelState.attempt.progress.currentLetterStartTime || 0);
     const elapsedTime = timeNow - (gameState.levelState.attempt.startTime || timeNow);
     const elapsedFraction = Math.min(1.0, elapsedTime / gameState.levelState.level.winTime);
-
-    const keyQueue = gameState.keyQueue;
-    // process any keys
-    if (keyQueue.length) {
-      keyQueue.forEach(k => {
-        const keyPressed = Key.byKey(k);
-        gameState.badKey = false;
-        if (keyPressed === gameState.levelState.attempt.progress.nextKey) {
-          // good job, play a click sound
-          if (keyPressed == Key.byKey(Keyboard.KEY_SPACE)) {
-            Assets.Sound.click2.play(undefined, undefined, 0.1);
-          }
-          else if (keyPressed) {
-            Assets.Sound.click.play(undefined, undefined, 0.1);
-          }
-          const level = gameState.levelState;
-          advanceProgress(elapsedTime);
-          if (gameState.levelState.attempt.progress.charsCompleted === 0) {
-            if (gameState.levelState > level) {
-              Assets.Sound.success.play(undefined, undefined, 0.1);
-            }
-            else {
-              Assets.Sound.bell.play(undefined, undefined, 0.1);
-            }
-          }
-        }
-        else if (k === 27) {
-          resetProgress();
-        }
-        else if (keyPressed) {
-          // whoops, buzzer
-          gameState.badKey = k;
-          Assets.Sound.buzzer.play(undefined, undefined, 0.1);
-          if (gameState.levelState.attempt.progress)
-            failLevel();
-        }
-      })
-      gameState.keyQueue = [];
-    }
 
     function checkRecords(user: string, time: number, prevRecords: GameLevelRecords): GameLevelRecords {
       const {personalRecord, universalRecord} = prevRecords;
@@ -526,6 +480,47 @@ export function sketch (p: p5) {
     const finishedTextWidth = lettersWidth(finishedText);
     const beginX = lettersWidth(gameState.levelState.level.challengeText[0]) * 0.5;
     const endX = lettersWidth(gameState.levelState.level.challengeText) - lettersWidth(gameState.levelState.level.challengeText.slice(-1)) * 0.5;
+    const nextKey = getNextKey(nextChar);
+
+    const keyQueue = gameState.keyQueue;
+    // process any keys
+    if (keyQueue.length) {
+      keyQueue.forEach(k => {
+        const keyPressed = Key.byKey(k);
+        gameState.badKey = false;
+        if (keyPressed === nextKey) {
+          // good job, play a click sound
+          if (keyPressed == Key.byKey(Keyboard.KEY_SPACE)) {
+            Assets.Sound.click2.play(undefined, undefined, 0.1);
+          }
+          else if (keyPressed) {
+            Assets.Sound.click.play(undefined, undefined, 0.1);
+          }
+          const level = gameState.levelState;
+          advanceProgress(elapsedTime);
+          if (gameState.levelState.attempt.progress.charsCompleted === 0) {
+            if (gameState.levelState > level) {
+              Assets.Sound.success.play(undefined, undefined, 0.1);
+            }
+            else {
+              Assets.Sound.bell.play(undefined, undefined, 0.1);
+            }
+          }
+        }
+        else if (k === 27) {
+          resetProgress();
+        }
+        else if (keyPressed) {
+          // whoops, buzzer
+          gameState.badKey = k;
+          console.log("bad key, expected", nextKey, "but got", k)
+          Assets.Sound.buzzer.play(undefined, undefined, 0.1);
+          if (gameState.levelState.attempt.progress)
+            failLevel();
+        }
+      })
+      gameState.keyQueue = [];
+    }
 
     // calculate how much of the text, in pixels, we've completed
     // we'll count the current character as half completed and so we'll use half its width
@@ -657,7 +652,7 @@ export function sketch (p: p5) {
     }
 
     if (gameState.badKey) {
-      drawKeyboard(1, gameState.levelState.attempt.progress.nextKey);
+      drawKeyboard(1, nextKey);
     }
     else if (timeOnCurrentLetter > 2000) {
       // the user has been on this letter for a while,
@@ -665,7 +660,7 @@ export function sketch (p: p5) {
 
       // we'll fade the keyboard in over the course of a second
       const kbAlpha = 1 - Math.min(1000, 3000 - Math.min(timeOnCurrentLetter, 3000)) / 1000;
-      drawKeyboard(kbAlpha, gameState.levelState.attempt.progress.nextKey);
+      drawKeyboard(kbAlpha, nextKey);
     }
 
     p.noStroke();
