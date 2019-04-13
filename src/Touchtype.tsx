@@ -41,13 +41,16 @@ type GameLevelRecords = {
 }
 
 type GameLevelAttemptState = {
-  count: number,
+  attemptCount: number,
   failed: boolean,
   startTime: number,
-  progress: number,
-  nextChar: string,
-  nextKey: Key,
-  currentLetterStartTime?: number,
+  progress: GameLevelAttemptProgress,
+}
+
+type GameLevelAttemptProgress = {
+  readonly charsCompleted: number,
+  readonly nextKey: Key,
+  readonly currentLetterStartTime?: number,
 }
 
 type GameLevelState = {
@@ -203,7 +206,7 @@ export function sketch (p: p5) {
     console.log("saving...");
     const progress: UserProgress = {
       level: gameState.levelState.level.levelNumber,
-      attempts: gameState.levelState.attempt.count,
+      attempts: gameState.levelState.attempt.attemptCount,
       rank: gameState.rank || 0,
     }
     Storage.progress.put(progress);
@@ -218,16 +221,25 @@ export function sketch (p: p5) {
     })
   }
 
-  function setProgress(progress: number) {
-    gameState.levelState.attempt.progress = progress;
-    gameState.levelState.attempt.nextChar = gameState.levelState.level.challengeText[progress];
-    gameState.levelState.attempt.nextKey = Key.byChar(gameState.levelState.attempt.nextChar.toLowerCase());
-    gameState.levelState.attempt.currentLetterStartTime = p.millis();
+  function progress(challenge: string, charsCompleted: number) {
+    const nextChar = getNextChar(challenge, charsCompleted);
+    const nextKey = getNextKey(nextChar);
+    return {
+      charsCompleted,
+      nextChar,
+      nextKey,
+      currentLetterStartTime: p.millis(),
+    }
+  }
+
+  function setProgress(charsCompleted: number) {
+    const prev = gameState.levelState.attempt.progress;
+    gameState.levelState.attempt.progress = progress(gameState.levelState.level.challengeText, charsCompleted)
   }  
 
   function resetProgress(noAttempt: boolean = false) {
     if (!noAttempt) {
-      gameState.levelState.attempt.count++;
+      gameState.levelState.attempt.attemptCount++;
       saveProgress(user);
     }
     gameState.levelState.attempt.failed = false;
@@ -236,7 +248,7 @@ export function sketch (p: p5) {
   }  
 
   function gotoLevel(level: number, attempts: number) {
-    gameState.levelState.attempt.count = attempts || 0
+    gameState.levelState.attempt.attemptCount = attempts || 0
     gameState.levelState.level = {
       levelNumber: level,
       challengeText: getChallengeText(levels, level),
@@ -271,11 +283,12 @@ export function sketch (p: p5) {
           records: {}, // TODO: why don't we have records here?
           attempt: {
             startTime: 0,
-            count: attempts || 0,
+            attemptCount: attempts || 0,
             failed: false,
-            progress: progress,
-            nextChar: nextChar,
-            nextKey: nextKey,
+            progress: {
+              charsCompleted: progress,
+              nextKey: nextKey,
+            }
           },
         },
         rank: rank,
@@ -321,7 +334,7 @@ export function sketch (p: p5) {
     }
 
     const timeNow = p.millis();
-    const timeOnCurrentLetter = timeNow - (gameState.levelState.attempt.currentLetterStartTime || 0);
+    const timeOnCurrentLetter = timeNow - (gameState.levelState.attempt.progress.currentLetterStartTime || 0);
     const elapsedTime = timeNow - (gameState.levelState.attempt.startTime || timeNow);
     const elapsedFraction = Math.min(1.0, elapsedTime / gameState.levelState.level.winTime);
 
@@ -331,7 +344,7 @@ export function sketch (p: p5) {
       keyQueue.forEach(k => {
         const keyPressed = Key.byKey(k);
         gameState.badKey = false;
-        if (keyPressed === gameState.levelState.attempt.nextKey) {
+        if (keyPressed === gameState.levelState.attempt.progress.nextKey) {
           // good job, play a click sound
           if (keyPressed == Key.byKey(Keyboard.KEY_SPACE)) {
             Assets.Sound.click2.play(undefined, undefined, 0.1);
@@ -341,7 +354,7 @@ export function sketch (p: p5) {
           }
           const level = gameState.levelState;
           advanceProgress(elapsedTime);
-          if (gameState.levelState.attempt.progress === 0) {
+          if (gameState.levelState.attempt.progress.charsCompleted === 0) {
             if (gameState.levelState > level) {
               Assets.Sound.success.play(undefined, undefined, 0.1);
             }
@@ -377,11 +390,13 @@ export function sketch (p: p5) {
     }
 
     function advanceProgress(time: number) {
-      if (gameState.levelState.attempt.progress === 0)
-        gameState.levelState.attempt.startTime = p.millis();
-      const nextProgress = gameState.levelState.attempt.progress + 1;
+      const {attempt} = gameState.levelState
+      // the time starts only when the first character is typed correctly
+      if (attempt.progress.charsCompleted === 0)
+        attempt.startTime = p.millis();
+      const nextProgress = attempt.progress.charsCompleted + 1;
       if (nextProgress === gameState.levelState.level.challengeText.length) {
-        if (gameState.levelState.attempt.failed) {
+        if (attempt.failed) {
           resetProgress();
         }
         else {
@@ -393,7 +408,7 @@ export function sketch (p: p5) {
             showMessage("New record: " + wpm + " wpm!");
           }
           saveUserRecordTime(user, time, gameState.levelState.level.challengeText);
-          if (gameState.levelState.level.winTime < (p.millis() - gameState.levelState.attempt.startTime))
+          if (gameState.levelState.level.winTime < (p.millis() - attempt.startTime))
             resetProgress();
           else
             advanceLevel(time);
@@ -453,7 +468,7 @@ export function sketch (p: p5) {
         gameState.rank++;
         nextLevel = ranks[gameState.rank].startLevel;
       }
-      gotoLevel(nextLevel, gameState.levelState.attempt.count + 1);
+      gotoLevel(nextLevel, gameState.levelState.attempt.attemptCount + 1);
       saveProgress(user);
     }
 
@@ -495,8 +510,8 @@ export function sketch (p: p5) {
     // split up the challenge text into the letter we expect next
     // and everything before it (finished)
     // and everything after it (remaining)
-    const finishedText = gameState.levelState.level.challengeText.substring(0, gameState.levelState.attempt.progress);
-    const remainText = gameState.levelState.level.challengeText.substring(gameState.levelState.attempt.progress + 1);
+    const finishedText = gameState.levelState.level.challengeText.substring(0, gameState.levelState.attempt.progress.charsCompleted);
+    const remainText = gameState.levelState.level.challengeText.substring(gameState.levelState.attempt.progress.charsCompleted + 1);
 
     // we'll set the text size and font now
     p.textSize(textHeight);
@@ -504,7 +519,10 @@ export function sketch (p: p5) {
 
 
     // get the width of each part so we can position it
-    const nextCharWidth = lettersWidth(gameState.levelState.attempt.nextChar);
+    const challengeText = gameState.levelState.level.challengeText;
+    const charsCompleted = gameState.levelState.attempt.progress.charsCompleted;
+    const nextChar = getNextChar(challengeText, charsCompleted);
+    const nextCharWidth = lettersWidth(nextChar);
     const finishedTextWidth = lettersWidth(finishedText);
     const beginX = lettersWidth(gameState.levelState.level.challengeText[0]) * 0.5;
     const endX = lettersWidth(gameState.levelState.level.challengeText) - lettersWidth(gameState.levelState.level.challengeText.slice(-1)) * 0.5;
@@ -533,7 +551,7 @@ export function sketch (p: p5) {
     letters(finishedText, cursorX - textShiftLeftX, textY);
 
     p.fill(255, 0, 0);
-    letters(gameState.levelState.attempt.nextChar, cursorX + finishedTextWidth - textShiftLeftX, textY);
+    letters(nextChar, cursorX + finishedTextWidth - textShiftLeftX, textY);
 
     p.fill(230, 230, 230);
     letters(remainText, cursorX + finishedTextWidth + nextCharWidth - textShiftLeftX, textY);
@@ -639,7 +657,7 @@ export function sketch (p: p5) {
     }
 
     if (gameState.badKey) {
-      drawKeyboard(1, gameState.levelState.attempt.nextKey);
+      drawKeyboard(1, gameState.levelState.attempt.progress.nextKey);
     }
     else if (timeOnCurrentLetter > 2000) {
       // the user has been on this letter for a while,
@@ -647,7 +665,7 @@ export function sketch (p: p5) {
 
       // we'll fade the keyboard in over the course of a second
       const kbAlpha = 1 - Math.min(1000, 3000 - Math.min(timeOnCurrentLetter, 3000)) / 1000;
-      drawKeyboard(kbAlpha, gameState.levelState.attempt.nextKey);
+      drawKeyboard(kbAlpha, gameState.levelState.attempt.progress.nextKey);
     }
 
     p.noStroke();
@@ -665,7 +683,7 @@ export function sketch (p: p5) {
     p.fill(0, 255, 0);
     p.textSize(24);
     p.text(gameState.levelState.level.levelNumber, 180, 35);
-    p.text(gameState.levelState.attempt.count, 330, 35);
+    p.text(gameState.levelState.attempt.attemptCount, 330, 35);
     p.text(ranks[gameState.rank].name, 450, 35);
     if (gameState.levelState.records.universalRecord && gameState.levelState.records.universalRecord.time) {
       p.noStroke();
@@ -713,6 +731,14 @@ export function sketch (p: p5) {
 };
 
 
+
+function getNextChar(challenge: string, charsCompleted: number) {
+  return challenge[charsCompleted];
+}
+
+function getNextKey(nextChar: string) {
+  return Key.byChar(nextChar.toLowerCase());
+}
 /*
 
 // ---------------------------------------------------
