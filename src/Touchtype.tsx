@@ -88,6 +88,15 @@ type GetRecordsResult = {
   }
 }
 
+type CanvasMetrics = {
+  readonly width: number,
+  readonly height: number,
+  readonly cursorX: number,
+  readonly textHeight: number,
+  readonly textY: number,
+}
+
+
 const Settings = {
   spacing: 2,
 }
@@ -160,6 +169,16 @@ function loadProgress(forUser: string, callback: ResultCallback<UserProgress>) {
   )
 }
 
+function calcSizes(canvasWidth: number, canvasHeight: number): CanvasMetrics {
+  const width = canvasWidth;
+  const height = canvasHeight;
+  const size = Math.min(width, height);
+  const cursorX = Math.ceil(width * 0.1);
+  const textHeight = Math.ceil(size * 0.1);
+  const textY = Math.ceil(height * 0.4 + textHeight * 0.5);
+  return {width, height, cursorX, textHeight, textY}
+}
+
 function calcWinTime(challengeText: string, rank: number) {
   const words = challengeText.length * 0.2;
   const minutes = words / ranks[rank].wpm;
@@ -177,24 +196,11 @@ export function sketch (p: p5) {
     background: p.loadImage("dark_spotlight.jpg"),
   };
 
-  let width: number
-  let height: number
-  let cursorX: number
-  let textHeight: number
-  let textY: number
+  let canvasMetrics: CanvasMetrics
 
   let loadingState: string;
 
   let gameState: GameState;
-
-  function calcSizes(canvasWidth: number, canvasHeight: number) {
-    width = canvasWidth;
-    height = canvasHeight;
-    const size = Math.min(width, height);
-    cursorX = Math.ceil(width * 0.1);
-    textHeight = Math.ceil(size * 0.1);
-    textY = Math.ceil(height * 0.4 + textHeight * 0.5);
-  }
 
   function getRecords(forUser: string, forChallenge: string) {
     const challenge = forChallenge.toLowerCase();
@@ -329,12 +335,13 @@ export function sketch (p: p5) {
   }
 
   p.windowResized = function() {
-    calcSizes(p.windowWidth, p.windowHeight);
+    canvasMetrics = calcSizes(p.windowWidth, p.windowHeight);
     p.resizeCanvas(p.windowWidth, p.windowHeight);
   }
 
   p.setup = function () {
-    calcSizes(p.windowWidth, p.windowHeight);
+    canvasMetrics = calcSizes(p.windowWidth, p.windowHeight);
+    const {width, height} = canvasMetrics;
     p.createCanvas(width, height);
     p.image(Images.background, 0, 0, width, height);
   };
@@ -348,6 +355,7 @@ export function sketch (p: p5) {
   // this remembers the current left-shiftedness of the challenge text in pixels
   let textShiftLeftX = 0;
   p.draw = function () {
+    const {width, height} = canvasMetrics;
     p.image(Images.background, 0, 0, width, height);
 
     if (!loadingState) {
@@ -466,6 +474,7 @@ export function sketch (p: p5) {
     const remainText = gameState.levelState.level.challengeText.substring(gameState.levelState.attempt.progress.charsCompleted + 1);
 
     // we'll set the text size and font now
+    const {textHeight, cursorX, textY} = canvasMetrics;
     p.textSize(textHeight);
     p.textFont(Assets.Fonts.game);
 
