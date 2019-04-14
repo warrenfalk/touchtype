@@ -259,29 +259,24 @@ export function sketch (p: p5) {
     })
   }
 
-  function progress(challenge: string, charsCompleted: number): GameLevelAttemptProgress {
-    return {
+  function setProgress(charsCompleted: number, nowMs: number) {
+    gameState.levelState.attempt.progress = {
       charsCompleted,
-      currentLetterStartTime: p.millis(),
+      currentLetterStartTime: nowMs,
     }
-  }
-
-  function setProgress(charsCompleted: number) {
-    const prev = gameState.levelState.attempt.progress;
-    gameState.levelState.attempt.progress = progress(gameState.levelState.level.challengeText, charsCompleted)
   }  
 
-  function resetProgress(noAttempt: boolean = false) {
+  function resetProgress(noAttempt: boolean, nowMs: number) {
     if (!noAttempt) {
       gameState.levelState.attempt.attemptCount++;
       saveProgress(user);
     }
     gameState.levelState.attempt.failed = false;
     gameState.levelState.attempt.startTime = 0;
-    setProgress(0);
+    setProgress(0, nowMs);
   }  
 
-  function gotoLevel(level: number, attempts: number) {
+  function gotoLevel(level: number, attempts: number, nowMs: number) {
     gameState.levelState.attempt.attemptCount = attempts || 0
     gameState.levelState.level = {
       levelNumber: level,
@@ -289,10 +284,10 @@ export function sketch (p: p5) {
       winTime: calcWinTime(gameState.levelState.level.challengeText, gameState.rank),
     }
     getRecords(user, gameState.levelState.level.challengeText);
-    resetProgress(true);
+    resetProgress(true, nowMs);
   }  
 
-  function initializeGameState() {
+  function initializeGameState(nowMs: number) {
     loadingState = "loading";
     loadProgress(user, result => {
       if (isError(result)) {
@@ -329,7 +324,7 @@ export function sketch (p: p5) {
         badKey: false,
         messages: [],
       }
-      gotoLevel(level, attempts);
+      gotoLevel(level, attempts, nowMs);
       loadingState = "loaded";
     });
   }
@@ -356,10 +351,11 @@ export function sketch (p: p5) {
   let textShiftLeftX = 0;
   p.draw = function () {
     const {width, height} = canvasMetrics;
+    const nowMs = p.millis()
     p.image(Images.background, 0, 0, width, height);
 
     if (!loadingState) {
-      initializeGameState();
+      initializeGameState(nowMs);
       return;
     }
 
@@ -384,7 +380,7 @@ export function sketch (p: p5) {
       }
     }
 
-    function advanceProgress(time: number) {
+    function advanceProgress(time: number, nowMs: number) {
       const {attempt} = gameState.levelState
       // the time starts only when the first character is typed correctly
       if (attempt.progress.charsCompleted === 0)
@@ -392,7 +388,7 @@ export function sketch (p: p5) {
       const nextProgress = attempt.progress.charsCompleted + 1;
       if (nextProgress === gameState.levelState.level.challengeText.length) {
         if (attempt.failed) {
-          resetProgress();
+          resetProgress(false, nowMs);
         }
         else {
           const prevRecords = gameState.levelState.records;
@@ -404,13 +400,13 @@ export function sketch (p: p5) {
           }
           saveUserRecordTime(user, time, gameState.levelState.level.challengeText);
           if (gameState.levelState.level.winTime < (p.millis() - attempt.startTime))
-            resetProgress();
+            resetProgress(false, nowMs);
           else
-            advanceLevel(time);
+            advanceLevel(time, nowMs);
         }
         return;
       }
-      setProgress(nextProgress);
+      setProgress(nextProgress, nowMs);
     }
 
     function failLevel() {
@@ -457,13 +453,13 @@ export function sketch (p: p5) {
       apiPost('./api/save-time', data, () => {console.log('time saved')});
     }
     
-    function advanceLevel(time: number) {
+    function advanceLevel(time: number, nowMs: number) {
       let nextLevel = gameState.levelState.level.levelNumber + 1;
       if (nextLevel >= levels.length) {
         gameState.rank++;
         nextLevel = ranks[gameState.rank].startLevel;
       }
-      gotoLevel(nextLevel, gameState.levelState.attempt.attemptCount + 1);
+      gotoLevel(nextLevel, gameState.levelState.attempt.attemptCount + 1, nowMs);
       saveProgress(user);
     }
 
@@ -504,7 +500,7 @@ export function sketch (p: p5) {
             Assets.Sound.click.play(undefined, undefined, 0.1);
           }
           const level = gameState.levelState;
-          advanceProgress(elapsedTime);
+          advanceProgress(elapsedTime, nowMs);
           if (gameState.levelState.attempt.progress.charsCompleted === 0) {
             if (gameState.levelState > level) {
               Assets.Sound.success.play(undefined, undefined, 0.1);
@@ -515,7 +511,7 @@ export function sketch (p: p5) {
           }
         }
         else if (k === 27) {
-          resetProgress();
+          resetProgress(false, nowMs);
         }
         else if (keyPressed) {
           // whoops, buzzer
