@@ -65,7 +65,6 @@ type GameState = {
   levelState: GameLevelState,
   rank: number,
   saving: boolean,
-  
   keyQueue: number[],
   badKey: false | number,
   messages: Message[],
@@ -93,6 +92,40 @@ const Settings = {
   spacing: 2,
 }
 
+// We use a special letters function instead of the built in text function
+// this is necessary because text adjusts the spaces between different letters differently
+// and we can't allow that because we'll draw the text using multiple calls (for multiple
+// colors) and the spaces between letters would seem to change as we separate the text
+// at different places
+function letters(p: p5, s: string, x: number, y: number) {
+  if (s === "")
+    return 0
+  let cx = x;
+  // for each character in the string...
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    // draw the character
+    p.text(c, cx, y);
+    // calculate the character width (with spacing)
+    const cw = p.textWidth(c) + Settings.spacing;
+    // move the cursor by that much to prepare for the next character
+    cx += cw;
+  }
+}
+
+// we use a special letters width to measure the width of each letter individually
+// to go along with our "letters" function which puts text on the screen one letter at a time
+function lettersWidth(p: p5, s: string) {
+  if (s === null || s === undefined || s === "")
+    return 0;
+  let cx = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    const cw = p.textWidth(c) + Settings.spacing;
+    cx += cw;
+  }
+  return cx;
+}
 
 /*
 Note to self:  The plan here is as follows
@@ -426,41 +459,6 @@ export function sketch (p: p5) {
       saveProgress(user);
     }
 
-    // We use a special letters function instead of the built in text function
-    // this is necessary because text adjusts the spaces between different letters differently
-    // and we can't allow that because we'll draw the text using multiple calls (for multiple
-    // colors) and the spaces between letters would seem to change as we separate the text
-    // at different places
-    function letters(s: string, x: number, y: number) {
-      if (s === "")
-        return 0
-      let cx = x;
-      // for each character in the string...
-      for (let i = 0; i < s.length; i++) {
-        const c = s[i];
-        // draw the character
-        p.text(c, cx, y);
-        // calculate the character width (with spacing)
-        const cw = p.textWidth(c) + Settings.spacing;
-        // move the cursor by that much to prepare for the next character
-        cx += cw;
-      }
-    }
-    // we use a special letters width to measure the width of each letter individually
-    // to go along with our "letters" function which puts text on the screen one letter at a time
-    function lettersWidth(s: string) {
-      if (s === null || s === undefined || s === "")
-        return 0;
-      let cx = 0;
-      for (let i = 0; i < s.length; i++) {
-        const c = s[i];
-        const cw = p.textWidth(c) + Settings.spacing;
-        cx += cw;
-      }
-      return cx;
-    }
-
-    
     // split up the challenge text into the letter we expect next
     // and everything before it (finished)
     // and everything after it (remaining)
@@ -476,10 +474,10 @@ export function sketch (p: p5) {
     const challengeText = gameState.levelState.level.challengeText;
     const charsCompleted = gameState.levelState.attempt.progress.charsCompleted;
     const nextChar = getNextChar(challengeText, charsCompleted);
-    const nextCharWidth = lettersWidth(nextChar);
-    const finishedTextWidth = lettersWidth(finishedText);
-    const beginX = lettersWidth(gameState.levelState.level.challengeText[0]) * 0.5;
-    const endX = lettersWidth(gameState.levelState.level.challengeText) - lettersWidth(gameState.levelState.level.challengeText.slice(-1)) * 0.5;
+    const nextCharWidth = lettersWidth(p, nextChar);
+    const finishedTextWidth = lettersWidth(p, finishedText);
+    const beginX = lettersWidth(p, gameState.levelState.level.challengeText[0]) * 0.5;
+    const endX = lettersWidth(p, gameState.levelState.level.challengeText) - lettersWidth(p, gameState.levelState.level.challengeText.slice(-1)) * 0.5;
     const nextKey = getNextKey(nextChar);
 
     const keyQueue = gameState.keyQueue;
@@ -543,13 +541,13 @@ export function sketch (p: p5) {
     p.noStroke();
     // We draw it in three parts so we can use three different colors
     p.fill(50, 50, 50);
-    letters(finishedText, cursorX - textShiftLeftX, textY);
+    letters(p, finishedText, cursorX - textShiftLeftX, textY);
 
     p.fill(255, 0, 0);
-    letters(nextChar, cursorX + finishedTextWidth - textShiftLeftX, textY);
+    letters(p, nextChar, cursorX + finishedTextWidth - textShiftLeftX, textY);
 
     p.fill(230, 230, 230);
-    letters(remainText, cursorX + finishedTextWidth + nextCharWidth - textShiftLeftX, textY);
+    letters(p, remainText, cursorX + finishedTextWidth + nextCharWidth - textShiftLeftX, textY);
 
     // show current position
     const cursorY = textY - textHeight - 18;
