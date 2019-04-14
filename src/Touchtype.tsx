@@ -197,23 +197,22 @@ export function sketch (p: p5) {
   };
 
   let canvasMetrics: CanvasMetrics
-
   let loadingState: string;
-
   let gameState: GameState;
 
-  function getRecords(forUser: string, forChallenge: string) {
+  function getRecords(forUser: string, forChallenge: string, callback: ResultCallback<GameLevelRecords>) {
     const challenge = forChallenge.toLowerCase();
-    gameState.levelState.records = {}
     console.log('getting record for', forUser);
     if (forUser === "guest") {
       const userRecords = Storage.recordTimes.get()[forUser] || {}
       const userRecord = userRecords[forChallenge]
       if (userRecord) {
-        gameState.levelState.records = {
-          personalRecord: userRecord,
-          universalRecord: {user: "guest", time: userRecord},
-        }
+        callback({
+          success: {
+            personalRecord: userRecord,
+            universalRecord: {user: "guest", time: userRecord},
+          }
+        })
       }
       // TODO: load a local record from storage
       return
@@ -230,10 +229,12 @@ export function sketch (p: p5) {
         const universalRecord = response.record;
         const userRecord = response.users[forUser];
         if (gameState.levelState.level.challengeText.toLowerCase() === challenge.toLowerCase()) {
-          gameState.levelState.records = {
-            personalRecord: userRecord,
-            universalRecord: universalRecord,
-          }
+          callback({
+            success: {
+              personalRecord: userRecord,
+              universalRecord: universalRecord,
+            }
+          })
         }
         console.log('record is', userRecord, response);
       }
@@ -283,7 +284,12 @@ export function sketch (p: p5) {
       challengeText: getChallengeText(levels, level),
       winTime: calcWinTime(gameState.levelState.level.challengeText, gameState.rank),
     }
-    getRecords(user, gameState.levelState.level.challengeText);
+    getRecords(user, gameState.levelState.level.challengeText, (result) => {
+      if (isError(result))
+        throw result.error;
+      const records = result.success
+      gameState.levelState.records = records;
+    });
     resetProgress(true, nowMs);
   }  
 
