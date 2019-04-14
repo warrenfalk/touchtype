@@ -22,25 +22,11 @@ export class P5Sketch extends React.Component<Props> {
         if (!this.canvas) {
             this.canvas = new p5(this.props.sketch, this.wrapper);
         }
-        /*
-        if (this.canvas.myCustomRedrawAccordingToNewPropsHandler) {
-            this.canvas.myCustomRedrawAccordingToNewPropsHandler(this.props);
-        }
-        */
     }
     componentWillReceiveProps = (nextProps: Props) => {
         if (!this.canvas && nextProps.sketch !== this.props.sketch) {
             this.canvas = new p5(this.props.sketch, this.wrapper);
         }
-        /*
-        if (this.props.sketch !== newprops.sketch) {
-            this.wrapper.removeChild(this.wrapper.childNodes[0]);
-            this.canvas = new _p52['default'](newprops.sketch, this.wrapper);
-        }
-        if (this.canvas.myCustomRedrawAccordingToNewPropsHandler) {
-            this.canvas.myCustomRedrawAccordingToNewPropsHandler(newprops);
-        }
-        */
     }
 }
 
