@@ -191,6 +191,45 @@ function getChallengeText(levels: string[], level: number) {
   return levels[level]
 }
 
+function getRecords(forUser: string, forChallenge: string, callback: ResultCallback<GameLevelRecords>) {
+  const challenge = forChallenge.toLowerCase();
+  console.log('getting record for', forUser);
+  if (forUser === "guest") {
+    const userRecords = Storage.recordTimes.get()[forUser] || {}
+    const userRecord = userRecords[forChallenge]
+    if (userRecord) {
+      callback({
+        success: {
+          personalRecord: userRecord,
+          universalRecord: {user: "guest", time: userRecord},
+        }
+      })
+    }
+    return
+  }
+  apiPost<GetRecordsArgs, GetRecordsResult>(
+    './api/get-records',
+    {user: forUser, challenge: challenge},
+    (result) => {
+      if (isError(result)) {
+        console.error(result.error);
+        return;
+      }
+      const response = result.success;
+      const universalRecord = response.record;
+      const userRecord = response.users[forUser];
+      callback({
+        success: {
+          personalRecord: userRecord,
+          universalRecord: universalRecord,
+        }
+      })
+      console.log('record is', userRecord, response);
+    }
+  )
+}
+
+
 export function sketch (p: p5) {
   const Images = {
     background: p.loadImage("dark_spotlight.jpg"),
@@ -199,47 +238,6 @@ export function sketch (p: p5) {
   let canvasMetrics: CanvasMetrics
   let loadingState: string;
   let gameState: GameState;
-
-  function getRecords(forUser: string, forChallenge: string, callback: ResultCallback<GameLevelRecords>) {
-    const challenge = forChallenge.toLowerCase();
-    console.log('getting record for', forUser);
-    if (forUser === "guest") {
-      const userRecords = Storage.recordTimes.get()[forUser] || {}
-      const userRecord = userRecords[forChallenge]
-      if (userRecord) {
-        callback({
-          success: {
-            personalRecord: userRecord,
-            universalRecord: {user: "guest", time: userRecord},
-          }
-        })
-      }
-      // TODO: load a local record from storage
-      return
-    }
-    apiPost<GetRecordsArgs, GetRecordsResult>(
-      './api/get-records',
-      {user: forUser, challenge: challenge},
-      (result) => {
-        if (isError(result)) {
-          console.error(result.error);
-          return;
-        }
-        const response = result.success;
-        const universalRecord = response.record;
-        const userRecord = response.users[forUser];
-        if (gameState.levelState.level.challengeText.toLowerCase() === challenge.toLowerCase()) {
-          callback({
-            success: {
-              personalRecord: userRecord,
-              universalRecord: universalRecord,
-            }
-          })
-        }
-        console.log('record is', userRecord, response);
-      }
-    )
-  }
 
   function saveProgress(forUser: string) {
     console.log("saving...");
