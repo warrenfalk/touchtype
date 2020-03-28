@@ -1,7 +1,6 @@
 import React from 'react';
 import p5 from "p5";
 
-import { Component } from 'react'
 export type SketchFunction = (p: p5) => void
 
 type Props = {sketch: SketchFunction}

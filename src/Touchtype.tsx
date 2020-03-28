@@ -3,14 +3,14 @@ import './Touchtype.css';
 import {levels} from './levels';
 import {ranks} from './ranks';
 import {Key, Keyboard, keys, fingerHomes} from './keyboard';
-import {Assets, preloadAssets} from './assets';
+import {preloadAssets} from './assets';
 import {P5Sketch} from './P5Sketch';
 import {Storage, UserProgress} from './storage';
 import {apiPost, isError, ResultCallback} from './api';
-import p5 from 'p5';
+import p5, { Font } from 'p5';
 
 // prevent accidental use of localStorage
-declare var localStorage: {};
+declare var localStorage: never;
 
 class Touchtype extends Component {
   render() {
@@ -75,8 +75,8 @@ type Message = {
   expire: number
 }
 type TimeRecord = {
-  time: number,
-  user: string,
+  readonly time: number,
+  readonly user: string,
 }
 type LoadProgressArgs = {user: string}
 type LoadProgressResult = UserProgress
@@ -229,12 +229,272 @@ function getRecords(forUser: string, forChallenge: string, callback: ResultCallb
   )
 }
 
+// This function is responsible for drawing the keyboard on the screen
+// when helping the user out
+function drawKeyboardKeys(
+  p: p5,
+  alpha: number,
+  hintKey: Key,
+  width: number,
+  height: number,
+) {
+  const windowSize = Math.min(width, height);
+
+  const kbcenter = { x: width / 2, y: height * 0.8 };
+  const keyWidth = Math.floor(windowSize * 0.04);
+  const keyHeight = Math.floor(windowSize * 0.04);
+  const keyHorizPeriod = Math.ceil(windowSize * 0.045);
+  const keyVertPeriod = -Math.ceil(windowSize * 0.045);
+
+  p.noStroke();
+
+  // draw every key
+  keys.forEach(key => {
+    const keyAlpha = p.keyIsDown(key.key) ? 1.0 : 0.2;
+    p.strokeWeight(1)
+    p.stroke(255, 255, 255, 100)
+    p.fill(0, 77, 230, keyAlpha * alpha * 255);
+    const x = kbcenter.x + key.x * keyHorizPeriod;
+    const y = kbcenter.y + key.y * keyVertPeriod;
+    const w = keyWidth * key.w;
+
+    p.rect(x - w * 0.5, y - keyHeight * 0.5, w, keyHeight, 3);
+  })
+
+  // draw a circle for each finger
+  for (let i = 0; i < 9; i++) {
+    // calculate the home position for this finger
+    const h = fingerHomes[i];
+    const hx = kbcenter.x + h.x * keyHorizPeriod;
+    const hy = kbcenter.y + h.y * keyVertPeriod;
+    if (hintKey.finger !== i) {
+      // if this isn't the finger we're currently giving a hint for
+      // then draw it on its home key in black
+      p.fill(0, 0, 0, alpha * 255);
+      p.ellipse(hx, hy, keyWidth - 5);
+    }
+    else {
+      // this is the finger we're giving the hint for
+      // find the location of the key it needs to go on
+      const fx = kbcenter.x + hintKey.x * keyHorizPeriod;
+      const fy = kbcenter.y + hintKey.y * keyVertPeriod;
+      if (hx !== fx || hy !== fy) {
+        // if it isn't in its home position, then draw a line from the home position
+        // to where it needs to be
+        p.strokeWeight(3);
+        p.stroke(255, 0, 0, alpha * 255);
+        p.line(hx, hy, fx, fy);
+        p.strokeWeight(0);
+      }
+      p.fill(255, 0, 0, alpha * 255);
+      p.ellipse(fx, fy, keyWidth - 5);
+    }
+  }
+}
+
+
+function drawChallengeTextBar(
+  p: p5,
+  finishedText: string,
+  cursorX: number,
+  textShiftLeftX: number,
+  textY: number,
+  nextChar: string,
+  finishedTextWidth: number,
+  remainText: string,
+  nextCharWidth: number,
+  textHeight: number,
+  levelAttemptFailed: boolean,
+  universalRecordTime: number | undefined,
+  myRecord: number | undefined,
+  elapsedTime: number,
+  endX: number,
+  beginX: number,
+  elapsedFraction: number,
+) {
+  // Now we draw the text
+  p.noStroke();
+
+  // We draw it in three parts so we can use three different colors
+  p.fill(50, 50, 50);
+
+  letters(p, finishedText, cursorX - textShiftLeftX, textY);
+
+  p.fill(255, 0, 0);
+  letters(p, nextChar, cursorX + finishedTextWidth - textShiftLeftX, textY);
+
+  p.fill(230, 230, 230);
+  letters(p, remainText, cursorX + finishedTextWidth + nextCharWidth - textShiftLeftX, textY);
+
+  // show current position
+  const cursorY = textY - textHeight - 18;
+  p.noStroke();
+  p.fill(255, 0, 0);
+  p.ellipse(cursorX + finishedTextWidth - textShiftLeftX + (nextCharWidth * 0.5), cursorY, 13);
+  if (levelAttemptFailed)
+    p.stroke(255, 0, 0);
+  else
+    p.stroke(255, 255, 255);
+  p.strokeWeight(2);
+  p.noFill();
+  let progressPosition = finishedTextWidth + nextCharWidth * 0.5;
+  p.ellipse(cursorX + progressPosition - textShiftLeftX, cursorY, 18);
+
+  // show best pace position
+  const paceY = textY + 10 + 18;
+
+  const gameBest = universalRecordTime;
+
+  if (gameBest) {
+    const bestFraction = Math.min(1.0, elapsedTime / gameBest);
+    const bestPosition = beginX + bestFraction * (endX - beginX);
+    p.stroke(0, 90, 255);
+    p.noFill();
+    p.ellipse(cursorX + bestPosition - textShiftLeftX, paceY, 15);
+
+    const myBest = myRecord;
+    if (myBest && myBest < gameBest) {
+      const bestFraction = Math.min(1.0, elapsedTime / myBest);
+      const bestPosition = beginX + bestFraction * (endX - beginX);
+      p.stroke(120, 120, 120);
+      p.noFill();
+      p.ellipse(cursorX + bestPosition - textShiftLeftX, paceY, 15);
+    }  
+  }
+
+  // show pace position
+  if (!levelAttemptFailed) {
+    const pacePosition = beginX + elapsedFraction * (endX - beginX);
+    p.stroke(255, 255, 0);
+    p.noFill();
+    p.ellipse(cursorX + pacePosition - textShiftLeftX, paceY, 15);
+  }
+}
+
+function drawKeyboardArea(
+  p: p5,
+  badKey: number | false,
+  nextKey: Key,
+  width: number,
+  height: number,
+  timeOnCurrentLetter: number,
+) {
+  if (badKey) {
+    // the user hit a bad key, so immediately show what they should have hit
+    drawKeyboardKeys(p, 1, nextKey, width, height);
+  }
+  else if (timeOnCurrentLetter > 2000) {
+    // the user has been on this letter for a while,
+    // so let's help him out by showing the keyboard
+
+    // we'll fade the keyboard in over the course of a second
+    const kbAlpha = 1 - Math.min(1000, 3000 - Math.min(timeOnCurrentLetter, 3000)) / 1000;
+    drawKeyboardKeys(p, kbAlpha, nextKey, width, height);
+  }
+}
+
+function drawScoreBoard(
+  p: p5,
+  currentLevel: number,
+  attemptCount: number,
+  playerRank: string,
+  universalRecord: UniversalRecord | undefined,
+  statusFont: Font,
+) {
+  p.noStroke();
+  p.textSize(18);
+  p.textFont(statusFont);
+  p.fill(100, 100, 100);
+  p.text("Level", 120, 33);
+  p.text("Attempts", 240, 33);
+  p.text("Rank", 390, 33);
+  if (universalRecord)
+    p.text("Record", 600, 33);
+  
+  p.stroke(0, 128, 0);
+  p.strokeWeight(1);
+  p.fill(0, 255, 0);
+  p.textSize(24);
+  p.text(currentLevel, 180, 35);
+  p.text(attemptCount, 330, 35);
+  p.text(playerRank, 450, 35);
+  if (universalRecord) {
+    p.noStroke();
+    p.fill(20, 120, 255)
+    p.text(`${universalRecord.wpm} wpm by ${universalRecord.user}`, 680, 35);
+  }
+}
+
+function drawGameMessages(
+  p: p5,
+  width: number,
+  height: number,
+  messageFont: Font,
+  timeNow: number,
+  messages: ReadonlyArray<Message>,
+) {
+  if (messages.length) {
+    let messageY = height * 0.15;
+    const messageHeight = height * 0.0275;
+    p.textSize(messageHeight);
+    p.textFont(messageFont);
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i].message;
+      const timeLeft = messages[i].expire - timeNow;
+      if (timeLeft < 0)
+        continue;
+      const messageWidth = p.textWidth(message);
+      const messageX = width * 0.5 - messageWidth * 0.5;
+      const alpha = Math.min(timeLeft, 400) * (1/400);
+      p.noStroke();
+      p.fill(255, 255, 255, alpha * 255);
+      p.text(message, messageX, messageY);
+      messageY += messageHeight;
+    }
+  }
+}
+
+type UniversalRecord = TimeRecord & { readonly wpm: number }
+
+function drawScene(
+  p: p5,
+  finishedText: string,
+  cursorX: number,
+  textShiftLeftX: number,
+  textY: number,
+  nextChar: string,
+  finishedTextWidth: number,
+  remainText: string,
+  nextCharWidth: number,
+  textHeight: number,
+  levelAttemptFailed: boolean,
+  universalRecord: UniversalRecord | undefined,
+  myRecord: number | undefined,
+  elapsedTime: number,
+  endX: number,
+  beginX: number,
+  elapsedFraction: number,
+  badKey: number | false,
+  nextKey: Key,
+  width: number,
+  height: number,
+  timeOnCurrentLetter: number,
+  currentLevel: number,
+  attemptCount: number,
+  playerRank: string,
+  statusFont: Font,
+  messageFont: Font,
+  timeNow: number,
+  messages: ReadonlyArray<Message>,
+) {
+  drawChallengeTextBar(p, finishedText, cursorX, textShiftLeftX, textY, nextChar, finishedTextWidth, remainText, nextCharWidth, textHeight, levelAttemptFailed, universalRecord?.time, myRecord, elapsedTime, endX, beginX, elapsedFraction);
+  drawKeyboardArea(p, badKey, nextKey, width, height, timeOnCurrentLetter);
+  drawScoreBoard(p, currentLevel, attemptCount, playerRank, universalRecord, statusFont);
+  drawGameMessages(p, width, height, messageFont, timeNow, messages);
+}
+
 
 export function sketch (p: p5) {
-  const Images = {
-    background: p.loadImage("dark_spotlight.jpg"),
-  };
-
   let canvasMetrics: CanvasMetrics
   let loadingState: string;
   let gameState: GameState;
@@ -304,7 +564,6 @@ export function sketch (p: p5) {
       const challengeText = getChallengeText(levels, level);
       const rank = saved.rank || 0;
       const progress = 0;
-      const nextChar = challengeText[progress];
       gameState = {
         levelState: {
           level: {
@@ -338,25 +597,21 @@ export function sketch (p: p5) {
     p.resizeCanvas(p.windowWidth, p.windowHeight);
   }
 
+  const assets = preloadAssets(p);
+
   p.setup = function () {
     canvasMetrics = calcSizes(p.windowWidth, p.windowHeight);
     const {width, height} = canvasMetrics;
     p.createCanvas(width, height);
-    p.image(Images.background, 0, 0, width, height);
+    p.image(assets.images.background, 0, 0, width, height);
   };
-
-  let Assets: Assets
-
-  p.preload = function () {
-     Assets = preloadAssets(p);
-  }
 
   // this remembers the current left-shiftedness of the challenge text in pixels
   let textShiftLeftX = 0;
   p.draw = function () {
     const {width, height} = canvasMetrics;
     const nowMs = p.millis()
-    p.image(Images.background, 0, 0, width, height);
+    p.image(assets.images.background, 0, 0, width, height);
 
     if (!loadingState) {
       initializeGameState(nowMs);
@@ -398,7 +653,7 @@ export function sketch (p: p5) {
           const prevRecords = gameState.levelState.records;
           gameState.levelState.records = checkRecords(user, time, prevRecords);
           if (prevRecords.universalRecord && prevRecords.universalRecord.time && time < prevRecords.universalRecord.time) {
-            Assets.Sound.applause.play(undefined, undefined, 0.3);
+            assets.sounds.applause.play(undefined, undefined, 0.3);
             const wpm = calcWpm(gameState.levelState.level.challengeText, time);
             showMessage("New record: " + wpm + " wpm!");
           }
@@ -476,7 +731,7 @@ export function sketch (p: p5) {
     // we'll set the text size and font now
     const {textHeight, cursorX, textY} = canvasMetrics;
     p.textSize(textHeight);
-    p.textFont(Assets.Fonts.game);
+    p.textFont(assets.fonts.game);
 
 
     // get the width of each part so we can position it
@@ -497,20 +752,20 @@ export function sketch (p: p5) {
         gameState.badKey = false;
         if (keyPressed === nextKey) {
           // good job, play a click sound
-          if (keyPressed == Key.byKey(Keyboard.KEY_SPACE)) {
-            Assets.Sound.click2.play(undefined, undefined, 0.1);
+          if (keyPressed === Key.byKey(Keyboard.KEY_SPACE)) {
+            assets.sounds.click2.play(undefined, undefined, 0.1);
           }
           else if (keyPressed) {
-            Assets.Sound.click.play(undefined, undefined, 0.1);
+            assets.sounds.click.play(undefined, undefined, 0.1);
           }
           const level = gameState.levelState;
           advanceProgress(elapsedTime, nowMs);
           if (gameState.levelState.attempt.progress.charsCompleted === 0) {
             if (gameState.levelState > level) {
-              Assets.Sound.success.play(undefined, undefined, 0.1);
+              assets.sounds.success.play(undefined, undefined, 0.1);
             }
             else {
-              Assets.Sound.bell.play(undefined, undefined, 0.1);
+              assets.sounds.bell.play(undefined, undefined, 0.1);
             }
           }
         }
@@ -521,13 +776,14 @@ export function sketch (p: p5) {
           // whoops, buzzer
           gameState.badKey = k;
           console.log("bad key, expected", nextKey, "but got", k)
-          Assets.Sound.buzzer.play(undefined, undefined, 0.1);
+          assets.sounds.buzzer.play(undefined, undefined, 0.1);
           if (gameState.levelState.attempt.progress)
             failLevel();
         }
       })
       gameState.keyQueue = [];
     }
+
 
     // calculate how much of the text, in pixels, we've completed
     // we'll count the current character as half completed and so we'll use half its width
@@ -546,184 +802,50 @@ export function sketch (p: p5) {
     const difference = actualProgressX - textShiftLeftX;
     textShiftLeftX = textShiftLeftX + (difference * 0.1);
 
-    // Now we draw the text
-    p.noStroke();
-    // We draw it in three parts so we can use three different colors
-    p.fill(50, 50, 50);
-    letters(p, finishedText, cursorX - textShiftLeftX, textY);
-
-    p.fill(255, 0, 0);
-    letters(p, nextChar, cursorX + finishedTextWidth - textShiftLeftX, textY);
-
-    p.fill(230, 230, 230);
-    letters(p, remainText, cursorX + finishedTextWidth + nextCharWidth - textShiftLeftX, textY);
-
-    // show current position
-    const cursorY = textY - textHeight - 18;
-    p.noStroke();
-    p.fill(255, 0, 0);
-    p.ellipse(cursorX + finishedTextWidth - textShiftLeftX + (nextCharWidth * 0.5), cursorY, 13);
-    if (gameState.levelState.attempt.failed)
-      p.stroke(255, 0, 0);
-    else
-      p.stroke(255, 255, 255);
-    p.strokeWeight(2);
-    p.noFill();
-    let progressPosition = finishedTextWidth + nextCharWidth * 0.5;
-    p.ellipse(cursorX + progressPosition - textShiftLeftX, cursorY, 18);
-
-    // show best pace position
-    const paceY = textY + 10 + 18;
-
-    const gameBest = gameState.levelState.records.universalRecord && gameState.levelState.records.universalRecord.time;
-    if (gameBest) {
-      const bestFraction = Math.min(1.0, elapsedTime / gameBest);
-      const bestPosition = beginX + bestFraction * (endX - beginX);
-      p.stroke(0, 90, 255);
-      p.noFill();
-      p.ellipse(cursorX + bestPosition - textShiftLeftX, paceY, 15);
-
-      const myBest = gameState.levelState.records.personalRecord;
-      if (myBest && myBest < gameBest) {
-        const bestFraction = Math.min(1.0, elapsedTime / myBest);
-        const bestPosition = beginX + bestFraction * (endX - beginX);
-        p.stroke(120, 120, 120);
-        p.noFill();
-        p.ellipse(cursorX + bestPosition - textShiftLeftX, paceY, 15);
-      }  
+    const universalTimeRecord = gameState.levelState.records.universalRecord
+    const universalRecord = universalTimeRecord && {
+      ...universalTimeRecord,
+      wpm: calcWpm(gameState.levelState.level.challengeText, universalTimeRecord.time)
     }
 
-    // show pace position
-    if (!gameState.levelState.attempt.failed) {
-      const pacePosition = beginX + elapsedFraction * (endX - beginX);
-      p.stroke(255, 255, 0);
-      p.noFill();
-      p.ellipse(cursorX + pacePosition - textShiftLeftX, paceY, 15);
-    }
+    // remove expired messages
+    const messages = gameState.messages;
+    while (messages.length && messages[messages.length - 1].expire < timeNow)
+      messages.pop();
 
-    // This function is responsible for drawing the keyboard on the screen
-    // when helping the user out
-    function drawKeyboard(alpha: number, hintKey: Key) {
-      const windowSize = Math.min(width, height);
+    drawScene(
+      p,
+      finishedText,
+      cursorX,
+      textShiftLeftX,
+      textY,
+      nextChar,
+      finishedTextWidth,
+      remainText,
+      nextCharWidth,
+      textHeight,
+      gameState.levelState.attempt.failed,
+      universalRecord,
+      gameState.levelState.records.personalRecord,
+      elapsedTime,
+      endX,
+      beginX,
+      elapsedFraction,
+      gameState.badKey,
+      nextKey,
+      width,
+      height,
+      timeOnCurrentLetter,
+      gameState.levelState.level.levelNumber,
+      gameState.levelState.attempt.attemptCount,
+      ranks[gameState.rank].name,
+      assets.fonts.status,
+      assets.fonts.status,
+      timeNow,
+      gameState.messages
+    );
 
-      const kbcenter = { x: width / 2, y: height * 0.8 };
-      const keyWidth = Math.floor(windowSize * 0.04);
-      const keyHeight = Math.floor(windowSize * 0.04);
-      const keyHorizPeriod = Math.ceil(windowSize * 0.045);
-      const keyVertPeriod = -Math.ceil(windowSize * 0.045);
 
-      p.noStroke();
-
-      // draw every key
-      keys.forEach(key => {
-        const keyAlpha = p.keyIsDown(key.key) ? 1.0 : 0.2;
-        p.strokeWeight(1)
-        p.stroke(255, 255, 255, 100)
-        p.fill(0, 77, 230, keyAlpha * alpha * 255);
-        const x = kbcenter.x + key.x * keyHorizPeriod;
-        const y = kbcenter.y + key.y * keyVertPeriod;
-        const w = keyWidth * key.w;
-
-        p.rect(x - w * 0.5, y - keyHeight * 0.5, w, keyHeight, 3);
-      })
-
-      // draw a circle for each finger
-      for (let i = 0; i < 9; i++) {
-        // calculate the home position for this finger
-        const h = fingerHomes[i];
-        const hx = kbcenter.x + h.x * keyHorizPeriod;
-        const hy = kbcenter.y + h.y * keyVertPeriod;
-        if (hintKey.finger !== i) {
-          // if this isn't the finger we're currently giving a hint for
-          // then draw it on its home key in black
-          p.fill(0, 0, 0, alpha * 255);
-          p.ellipse(hx, hy, keyWidth - 5);
-        }
-        else {
-          // this is the finger we're giving the hint for
-          // find the location of the key it needs to go on
-          const fx = kbcenter.x + hintKey.x * keyHorizPeriod;
-          const fy = kbcenter.y + hintKey.y * keyVertPeriod;
-          if (hx !== fx || hy !== fy) {
-            // if it isn't in its home position, then draw a line from the home position
-            // to where it needs to be
-            p.strokeWeight(3);
-            p.stroke(255, 0, 0, alpha * 255);
-            p.line(hx, hy, fx, fy);
-            p.strokeWeight(0);
-          }
-          p.fill(255, 0, 0, alpha * 255);
-          p.ellipse(fx, fy, keyWidth - 5);
-        }
-      }
-    }
-
-    if (gameState.badKey) {
-      drawKeyboard(1, nextKey);
-    }
-    else if (timeOnCurrentLetter > 2000) {
-      // the user has been on this letter for a while,
-      // so let's help him out by showing the keyboard
-
-      // we'll fade the keyboard in over the course of a second
-      const kbAlpha = 1 - Math.min(1000, 3000 - Math.min(timeOnCurrentLetter, 3000)) / 1000;
-      drawKeyboard(kbAlpha, nextKey);
-    }
-
-    p.noStroke();
-    p.textSize(18);
-    p.textFont(Assets.Fonts.status);
-    p.fill(100, 100, 100);
-    p.text("Level", 120, 33);
-    p.text("Attempts", 240, 33);
-    p.text("Rank", 390, 33);
-    if (gameState.levelState.records.universalRecord && gameState.levelState.records.universalRecord.time)
-      p.text("Record", 600, 33);
-    
-    p.stroke(0, 128, 0);
-    p.strokeWeight(1);
-    p.fill(0, 255, 0);
-    p.textSize(24);
-    p.text(gameState.levelState.level.levelNumber, 180, 35);
-    p.text(gameState.levelState.attempt.attemptCount, 330, 35);
-    p.text(ranks[gameState.rank].name, 450, 35);
-    if (gameState.levelState.records.universalRecord && gameState.levelState.records.universalRecord.time) {
-      p.noStroke();
-      p.fill(20, 120, 255)
-      const wpm = calcWpm(gameState.levelState.level.challengeText, gameState.levelState.records.universalRecord.time)
-      p.text(wpm + " wpm by " + gameState.levelState.records.universalRecord.user, 680, 35);
-    }
-
-    if (gameState.messages.length) {
-      let messageY = height * 0.15;
-      const messageHeight = height * 0.0275;
-      p.textSize(messageHeight);
-      p.textFont(Assets.Fonts.status);
-      for (let i = 0; i < gameState.messages.length; i++) {
-        const message = gameState.messages[i].message;
-        const timeLeft = gameState.messages[i].expire - timeNow;
-        if (timeLeft < 0)
-          continue;
-        const messageWidth = p.textWidth(message);
-        const messageX = width * 0.5 - messageWidth * 0.5;
-        const alpha = Math.min(timeLeft, 400) * (1/400);
-        p.noStroke();
-        p.fill(255, 255, 255, alpha * 255);
-        p.text(message, messageX, messageY);
-        messageY += messageHeight;
-      }
-      while (gameState.messages.length && gameState.messages[gameState.messages.length - 1].expire < timeNow)
-        gameState.messages.pop();
-    }
-
-    //text(finishedText, idealX - finishedTextWidth, 300);
-    //text(remainText, idealX + nextCharWidth, 300);
-
-    //show("elapsedFraction", elapsedFraction);
-    //show("elapsedTime", elapsedTime);
-    //show("winTime", gameState.winTime)
-    //showAll();
-    
   };
 
   p.keyPressed = function() {
@@ -741,30 +863,3 @@ function getNextChar(challenge: string, charsCompleted: number) {
 function getNextKey(nextChar: string) {
   return Key.byChar(nextChar.toLowerCase());
 }
-/*
-
-// ---------------------------------------------------
-// Show functions
-
-let showVars = [];
-
-function show(name, value) {
-  showVars.push({name: name, value: value});
-}
-
-function showAll() {
-  let widths = showVars.map(v => textWidth(v.name + ": "));
-  let nameWidth = widths.reduce((a, v) => Math.max(a, v), 0);
-  showVars.forEach((v, i) => {
-    textSize(12);
-    noStroke();
-    fill(255, 255, 255, 200);
-    const { name, value } = v;
-    text(name + ": ", 4 + nameWidth - textWidth(name + ": "), 16 + 14 * i);
-    text(value, 4 + nameWidth, 16 + 14 * i)
-  })
-  showVars = [];
-}
-
-*/
-
