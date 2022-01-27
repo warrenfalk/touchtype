@@ -1,4 +1,5 @@
 export const levels = [
+  /*
   "a",
   "e",
   "a e",
@@ -194,6 +195,8 @@ export const levels = [
   "answer the study he found still the world should work",
   "when I type this sentence in time I will be a master but if I keep going I will be a grand master",
   "from here on all the sentences will make sense and might make me a little bit smarter",
+  */
+  "Type what you see",
   "Less is more.",
   "No pain, no gain.",
   "Enough is enough.",
