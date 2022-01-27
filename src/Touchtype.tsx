@@ -637,7 +637,7 @@ export function sketch (p: p5) {
     function checkRecords(user: string, time: number, prevRecords: GameLevelRecords): GameLevelRecords {
       const {personalRecord, universalRecord} = prevRecords;
       return {
-        universalRecord: (!universalRecord || !universalRecord.time || time < universalRecord.time)
+        universalRecord: (!universalRecord || !universalRecord.time || time < universalRecord.time) && (time)
           ? {time: time, user: user}
           : universalRecord,
         personalRecord: (!personalRecord || time < personalRecord)
