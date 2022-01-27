@@ -12,6 +12,22 @@ import p5, { Font } from 'p5';
 // prevent accidental use of localStorage
 declare var localStorage: never;
 
+(globalThis as any).developer = {
+  resetScore: () => {
+    Storage.progress.put({
+      level: 0,
+      attempts: 0,
+      rank: 0,
+    })
+  },
+  resetAll: () => {
+    Storage.progress.clear();
+    Storage.recordTimes.clear();
+    Storage.user.clear();
+    window.location.reload();
+  }
+}
+
 class Touchtype extends Component {
   render() {
     return (
