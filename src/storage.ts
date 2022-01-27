@@ -23,6 +23,9 @@ function storageField<T>(name: string, getDefault: (() => T)) {
     put: (value: T) => {
       let json = JSON.stringify(value);
       (localStorage as any)[name] = json;
+    },
+    clear: () => {
+      delete (localStorage as any)[name];
     }
   }
 }
