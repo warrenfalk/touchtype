@@ -205,6 +205,12 @@ function getRecords(forUser: string, forChallenge: string, callback: ResultCallb
         }
       })
     }
+    else {
+      callback({
+        success: {
+        }
+      })
+    }
     return
   }
   apiPost<GetRecordsArgs, GetRecordsResult>(
@@ -537,12 +543,13 @@ export function sketch (p: p5) {
 
   function gotoLevel(level: number, attempts: number, nowMs: number) {
     gameState.levelState.attempt.attemptCount = attempts || 0
+    const challengeText = getChallengeText(levels, level);
     gameState.levelState.level = {
       levelNumber: level,
-      challengeText: getChallengeText(levels, level),
+      challengeText: challengeText,
       winTime: calcWinTime(gameState.levelState.level.challengeText, gameState.rank),
     }
-    getRecords(user, gameState.levelState.level.challengeText, (result) => {
+    getRecords(user, challengeText, (result) => {
       if (isError(result))
         throw result.error;
       const records = result.success
@@ -718,7 +725,7 @@ export function sketch (p: p5) {
         gameState.rank++;
         nextLevel = ranks[gameState.rank].startLevel;
       }
-      gotoLevel(nextLevel, gameState.levelState.attempt.attemptCount + 1, nowMs);
+      gotoLevel(nextLevel, 0, nowMs);
       saveProgress(user);
     }
 
