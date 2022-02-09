@@ -256,6 +256,7 @@ export const levels = [
   "Feed a cold, starve a fever.",
   "Give credit where credit is due.",
   "In for a penny, in for a pound.",
+  "Where there's smoke there's fire",
   "Worrying never did anyone any good.",
   "Youth is wasted on the young.",
   "A dog is a man's best friend.",
