@@ -26,3 +26,5 @@ yarn-error.log*
 .yarn/*
 !.yarn/releases
 !.yarn/plugins
+
+.bash_history
