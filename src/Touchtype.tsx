@@ -38,7 +38,7 @@ class Touchtype extends Component {
 
 export default Touchtype;
 
-let user = Storage.user.get();
+const user = Storage.user.get();
 /*
 if (!user) {
   window.location.href = "./user.html";
