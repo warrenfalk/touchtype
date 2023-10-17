@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { Component } from 'react';
 import './Touchtype.css';
 import {levels} from './levels';
 import {ranks} from './ranks';
@@ -735,7 +735,7 @@ export function sketch (p: p5) {
       apiPost('./api/save-time', data, () => {console.log('time saved')});
     }
     
-    function advanceLevel(time: number, nowMs: number) {
+    function advanceLevel(_time: number, nowMs: number) {
       let nextLevel = gameState.levelState.level.levelNumber + 1;
       if (nextLevel >= levels.length) {
         gameState.rank++;
